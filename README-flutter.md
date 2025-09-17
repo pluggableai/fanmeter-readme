@@ -154,7 +154,7 @@ Where:
 The `getEventData`()` method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null, or not provided, this returns the closest event to date:
 
 ```
-String? EVENT_NAME =  'Round 1 2025-2026'
+String? EVENT_NAME = 'Round 1 2025-2026'
 
 // After initialized, you will be able to use the SDK methods.
 final result = await _fanmeterPlugin.getEventData(EVENT_NAME);
