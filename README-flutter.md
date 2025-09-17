@@ -158,7 +158,7 @@ String? EVENT_NAME =  'Round 1 2025-2026'
 
 // After initialized, you will be able to use the SDK methods.
 final result = await _fanmeterPlugin.getEventData(EVENT_NAME);
-print("[FANMETER - GETEVENTDATA - $EVENT NAME]: $result");
+print("[FANMETER - GETEVENTDATA - $EVENT_NAME]: $result");
 
 // OR.
 
