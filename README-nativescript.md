@@ -2,11 +2,13 @@
 
 The Fanmeter plugin is the one responsible for enabling Fanmeter in any mobile application. It is a simple plug-&-play plugin that makes available a set of methods that can be used to allow users to participate in activations such as the FAN OF THE MATCH or the SUPER FAN.
 
-## Plug-&-Play
+## Plug-&-Play vs Build your own UI
 
-Uses a default native UI that is launched to your users for them to participate in Fanmeter events - it is also able to launch and deliver push notifications as soon as the event starts and finishes, if you configure it.
+There are two possible types of integration. One is plug-&-play and uses a default native UI that is launched to your users for them to participate in Fanmeter events - it is also able to launch and deliver push notifications as soon as the event starts and finishes, if you configure it. If, on the other hand, you wish to create your own Fanmeter UI, you will follow a "build your own UI" approach.
 
   1. **Plug-&-Play UI**: you want everything automated (including a default Fanmeter view). You should also integrate with FCM to handle received notifications that start the event (in summary, you'll need to use the *execute*, *launchFanmeterNotification* and the *launchFanmeterView* methods);
+
+  2. **Build your own UI**: you want to handle the conditions yourself and develop your own UI (just call the *startService*, *stopService*, and *isServiceRunning* methods).
 
 ## Pre-Conditions
 
@@ -159,7 +161,7 @@ Where:
   * REGULATION_URL, the URL to the regulation for your events. Nullable;
   * FANMETER_LOG, enables additional logging.
 
-The `getEventData`, method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null this returns the closest event to date:
+The `getEventData` method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null, or not provided, this returns the closest event to date:
 ```
 let EVENT_NAME = 'Round 1 2025-2026';
 
@@ -188,6 +190,43 @@ try {
 } catch (error) {
     console.log('Error getting event data for closest event: ' + error);
 }
+```
+
+### Listeners for User Participation
+
+In both scenarios, you can subscribe to a listener that will notify you whenever there is a change in the user's participation status. For example, if the user leaves the venue of a geo-restricted event, the listener will alert you to this change. This can be particularly useful for updating the status of banners or buttons within your app.
+
+Two methods are available: `subscribeUserParticipationListener` and `unsubscribeUserParticipationListener`. The first method subscribes the listener to a specific event id, and you can subscribe to multiple events. The second method unsubscribes the listener (if no event id is provided, it will unsubscribe all active listeners).
+
+While the `unsubscribeUserParticipationListener` method always returns 1 (Success), as it forces the stop of any or all running listeners, the `subscribeUserParticipationListener` listener can return the following status codes:
+  * 0: User is not participating;
+  * 1: Validating the user participation (validation may take up to 30 seconds);
+  * 2: User is participating;
+  * 3: User has GPS disabled;
+  * 4: User is out of venue;
+  * 5: Unknown GPS coordinates.
+
+These methods can be invoked as shown below:
+
+```
+let EVENT_ID = '-99';
+
+// Subscribing a listener.
+FanmeterSdk.subscribeUserParticipationListener(
+    EVENT_ID,
+    (state: number) => {
+        console.log(`Event ${EVENT_ID} | Participation state changed: ${state}`);
+        // Update the status of your button/banner.
+    }
+);
+
+// Unsubscribing a listener. If no event id is set, it cancels all listeners.
+FanmeterSdk.unsubscribeUserParticipationListener(
+    EVENT_ID,
+    (res: number) => {
+        console.log(`Event ${EVENT_ID} | Unsubscribed with result: ${res}`);
+    }
+);
 ```
 
 ### Plug-&-Play UI
@@ -281,7 +320,7 @@ try {
 Where:
 * eventId, is the event id to show (nullable).
 
-This method returns the following values:
+These functions return the following values:
   * 1, success;
   * -80, no GPS/PUSH permissions;
   * -81, GPS disabled;
@@ -294,6 +333,7 @@ This method returns the following values:
   * -95, invalid external user data;
   * -96, failed to get event data;
   * -97, failed to start the Fanmeter service;
+  * -98, another Fanmeter service is already running.
 
 You are also required to subscribe the user to a FCM topic so that the user can receive Fanmeter notifications. This can be done, for example, as follows:
 
@@ -303,6 +343,64 @@ You are also required to subscribe the user to a FCM topic so that the user can 
 firebase().messaging().subscribeToTopic('football_senior').then(() => {
     console.log('Subscribed to topic: football_senior')
 });
+```
+
+### Build your own UI
+
+If you want full control and implement your own UI, this library exposes three methods, that must be called as demonstrated below. In particular:
+  * `startService`, starts the Fanmeter service that enables Fanmeter for your client's device during a particular event;
+  * `stopService`, stops the Fanmeter service. The service will, still, terminate automatically as soon as the event ends. This returns 1, if success, otherwise an error code;
+  * `isServiceRunning`, used to check the current status of the Fanmeter service. Returns 1, if the service is running, otherwise 0.
+
+The `startService` method is used to start the Fanmeter service. This method accepts an eventId, that should be obtained using the `getEventData` method and should be called as follows (associated, for example, to a particular button):
+
+```
+// Start the Fanmeter Service using a specific button!
+try {
+    FanmeterSdk.startService(
+        EVENT_ID, 
+        null, 
+        (res: number) => {
+            console.log(`Start service result: ${res}`);
+        }
+    );
+} catch (error) {
+    console.log(`Error starting service: ${error}`);
+}
+```
+
+Where:
+  * EVENT_ID, the id of the event the user will participate when the start service is called;
+  * NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the app's default view).
+
+The `stopService` method is used to stop the Fanmeter service (can be toggled with the previous method). Even if the user does not explicitly stop the service, it will automatically stop as soon as the event finishes. This returns 1, if success, otherwise an error code.
+
+```
+// Stop the Fanmeter Service using a specific button!
+try {
+    FanmeterSdk.stopService(
+        (res: number) => {
+            console.log(`Stop service result: ${res}`);
+        }
+    );
+} catch (error) {
+    console.log(`Error stopping service: ${error}`);
+}
+```
+
+Finally, the `isServiceRunning` method is used to check the current status of the Fanmeter service. This returns 1, if the service is running, otherwise 0.
+
+```
+// Check the Fanmeter Service status.
+try {
+    FanmeterSdk.isServiceRunning(
+        (res: number) => {
+            console.log(`Service running status: ${res}`);
+        }
+    );
+} catch (error) {
+    console.log(`Error checking service status: ${error}`);
+}
 ```
 
 ### Additional info
@@ -376,22 +474,7 @@ launchView() {
 }
 ```
 
-## More info
+### Additional info
 
-* For full compatibility, attention to the used versions of XCODE, SWIFT and COCOAPODS. Recommended versions are **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
+For full compatibility, attention to the used versions of XCODE, SWIFT and COCOAPODS. Recommended versions are **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**. For more info visit https://pluggableai.xyz/ or give us feedback to info@pluggableai.xyz.
 
-* For more info visit https://pluggableai.xyz/ or give us feedback to info@pluggableai.xyz.
-
-## License
-
-Copyright 2024 PLUGGABLE, LDA (aka PluggableAI)
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

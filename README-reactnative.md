@@ -52,7 +52,7 @@ Note that, for Android only, Fanmeter is required to use a **Data Sync foregroun
 
 ### Push Notifications
 
-If you want a **fully plug-&-play experience**and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate [React Native Firebase](https://rnfirebase.io/) and then with [Firebase Cloud Messaging (FCM)](https://rnfirebase.io/messaging/usage). The steps are as follows:
+If you want a **fully plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate [React Native Firebase](https://rnfirebase.io/) and then with [Firebase Cloud Messaging (FCM)](https://rnfirebase.io/messaging/usage). The steps are as follows:
 
 1. Create a new [Firebase project](https://console.firebase.google.com/). Note that current versions of firebase-ios-sdk have a minimum Xcode requirement of 14.1, which implies a minimum macOS version of 12.5 (macOS Monterey);
 
@@ -136,7 +136,7 @@ If you want a **fully plug-&-play experience**and wish to receive push notificat
     npm run ios
     ```
 
-**NOTE**: FCM via APNs **does not work on iOS Simulators**. To receive messages & notifications a real device is required. The same is recommended for Android. Also, for iOS, React-Native-Firebase uses `use_frameworks`, which has compatibility issues with Flipper, Hermes, and Fabric.
+**NOTE**: FCM via APNs **does not work on iOS Simulators**. To receive messages & notifications a real device is required. The same is recommended for Android.
 
 **NOTE 2**: In iOS foreground notification are not displayed. If it is needed you can use a package for local notifications.
 
@@ -263,7 +263,7 @@ const EVENT_NAME: string | null = 'Round 1 2025-2026';
 getEventData(
     EVENT_NAME
 ).then((res) => {
-    console.log('Result ' + eventTitle + ': ', res.eventId);
+    console.log('Result ' + EVENT_NAME + ': ', res.eventId);
 });
 
 // OR.
@@ -305,7 +305,7 @@ subscribeUserParticipationListener(EVENT_ID, (state, eventId) => {
 // OR.
 
 // Unsubscribing a listener. If no event id is set, it cancels all listeners.
-unsubscribeUserParticipationListener().then((res) = > {
+unsubscribeUserParticipationListener().then((res) => {
     console.log('Unsubscribed with result: ', res )
 });
 ```
@@ -538,4 +538,4 @@ return (
 const styles = StyleSheet.create({container: {padding: 16, alignItems: 'center'}, buttonContainer: {marginBottom: 10}, spinner: {marginTop: 10}});
 ```
 
-For full compatibility, attention to the used versions of XCODE, SWIFT and COCOAPODS. Recommended versions are **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**. For more info visit https://pluggableai.xyz/ or send your feedback to info@pluggableai.xyz.
+For full compatibility, attention to the used versions of XCODE, SWIFT and COCOAPODS. Recommended versions are **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**. For more info visit https://pluggableai.xyz/ or give us feedback to info@pluggableai.xyz.

@@ -54,7 +54,7 @@ Note that, for Android only, Fanmeter is required to use a **Data Sync foregroun
 
 ### Push Notifications
 
-If you want a **fully plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate `Firebase Cloud Messaging`. A complete, step-by-step tutorial is available in [Firebase's wiki](https://firebase.google.com/docs/cloud-messaging).
+If you want a **fully plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate Firebase Cloud Messaging. A complete, step-by-step tutorial is available in [Firebase's wiki](https://firebase.google.com/docs/cloud-messaging).
 
 Unfortunately, there is no official support from Google to Cordova's Firebase. One possible plugin, [Cloud Messaging](https://firebase.google.com/docs/cloud-messaging), can be used even though it has a set of issues that require specific attention when implementing it. For capacitor/Outsystems, look for the official firebase plugin. Nonetheless, the integration of Firebase in Cordova can be done as follows:
 

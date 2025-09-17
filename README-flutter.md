@@ -36,7 +36,7 @@ For iOS, add the **Background Modes** capability and enable **Location Updates**
 <string>Location access is required to participate in Fanmeter events!</string>
 ```
 
-Note that, for Android only, Fanmeter is required to use a **Data Sync foreground service** to communicate non-intrusive sensor data with Pluggable's server. Since API 34 of Android, when publishing an app that uses such services, you are required to fill a **Policy Declaration** where you must justify the need for such services. In Fanmeter's case, when filling such policy, you will be asked the question "What tasks require your app to use the FOREGROUND_SERVICE_DATA_SYNC permission?". There, you should:
+Note that, for Android only, Fanmeter is required to use a **Data Sync foreground service** to communicate non-intrusive sensor data with Pluggable's server. Since API 34 of Android, when publishing an app that uses such services, you are required to fill a **Policy Declaration** where you must justify the need for such services. In Fanmeter's case, when filling such policy, you will be asked the question "*What tasks require your app to use the FOREGROUND_SERVICE_DATA_SYNC permission?*". There, you should:
 
 1. Select the option **OTHER** in **Other tasks**;
 
