@@ -386,7 +386,7 @@ Finally, the `isServiceRunning` method is used to check the current status of th
 // Check the Fanmeter Service status.
 cordova.plugins.FanmeterPlugin.isServiceRunning(
     function(response){
-        console.log("'[ISSERVICERUNNING] Success: ' + JSON.stringify(response));
+        console.log('[ISSERVICERUNNING] Success: ' + JSON.stringify(response));
     }, function(error){
         console.log('[ISSERVICERUNNING] Error: ' + JSON.stringify(error));
     }
