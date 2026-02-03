@@ -81,7 +81,7 @@ If you want a fully **plug-&-play experience** and wish to receive push notifica
 
 3. Then, to start using the Cloud Messaging package within your project follow these [steps](https://firebase.flutter.dev/docs/messaging/usage);
 
-4. Integrating the Cloud Messaging plugin on iOS requires additional setup before your devices receive messages. The full steps are available [official docs](https://firebase.google.com/docs/cloud-messaging/flutter/get-started#ios-setup-requirements), but the following prerequisites are required to be able to enable messaging:
+4. Integrating the Cloud Messaging plugin on iOS requires additional setup before your devices receive messages. The full steps are available in the [official docs](https://firebase.google.com/docs/cloud-messaging/flutter/get-started#ios-setup-requirements), but the following prerequisites are required to be able to enable messaging:
     + You must have an active Apple Developer Account;
     + You must have a physical iOS device to receive messages.
 
