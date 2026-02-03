@@ -97,7 +97,7 @@ If you want a fully **plug-&-play experience** and wish to receive push notifica
 
     + If you're using flutter with Objective-C, add this code to your `appdelegate.m` file.
 
-    ```obj-c
+    ```objective-c
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
         [FIRApp configure]; //add this at the top
         // ...
