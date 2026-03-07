@@ -2,6 +2,21 @@
 
 The Fanmeter plugin is the one responsible for enabling Fanmeter in any mobile application. It is a simple plug-&-play plugin that makes available a set of methods that can be used to allow users to participate in activations such as the FAN OF THE MATCH or the SUPER FAN.
 
+## Table of Contents
+
++ [Plug-&-Play vs Build your own UI](#plug--play-vs-build-your-own-ui)
++ [Pre-Conditions](#pre-conditions)
+  + [Compatibility](#compatibility)
+  + [Meta-Data](#meta-data)
+  + [Push Notifications](#push-notifications)
++ [Set up the Fanmeter Plugin in your Flutter App](#set-up-the-fanmeter-plugin-in-your-flutter-app)
+  + [Install the Plugin](#install-the-plugin)
+  + [Methods initialize and getEventData](#methods-initialize-and-geteventdata)
+  + [Listeners for User Participation](#listeners-for-user-participation)
++ [Plug-&-Play UI](#plug--play-ui)
++ [Build your own UI](#build-your-own-ui)
++ [Additional info](#additional-info)
+
 ## Plug-&-Play vs Build your own UI
 
 There are two possible types of integration. One is plug-&-play and uses a default native UI that is launched to your users for them to participate in Fanmeter events - it is also able to launch and deliver push notifications as soon as the event starts and finishes, if you configure it. If, on the other hand, you wish to create your own Fanmeter UI, you will follow a "build your own UI" approach.
@@ -12,13 +27,17 @@ There are two possible types of integration. One is plug-&-play and uses a defau
 
 ## Pre-Conditions
 
+### Compatibility
+
+For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
+
 ### Meta-Data
 
 On Android, push notification permission is required to inform the user that a foreground service is running. Additionally, Location permission is necessary for fans to participate in geo-restricted events. Make sure to request these permissions.
 
-For iOS, add the **Background Modes** capability and enable **Location Updates**. Additionally, open your _Info.plist_ file and add the following code at the bottom of the file:
+For iOS, add the **Background Modes** capability and enable **Location Updates**. Additionally, open your *Info.plist* file and add the following code at the bottom of the file:
 
-```
+```plist
 <key>UIBackgroundModes</key>
 <array>
     <string>fetch</string>
@@ -40,19 +59,21 @@ Note that, for Android only, Fanmeter is required to use a **Data Sync foregroun
 
 1. Select the option **OTHER** in **Other tasks**;
 
-2. Provide the following video link: 
-    ```
+2. Provide the following video link:
+
+    ```txt
     https://youtu.be/w4d7Pgksok0
     ```
 
-3. Provide the following description: 
-    ```
+3. Provide the following description:
+
+    ```txt
     Fanmeter is an Android SDK, incorporated in this app, that uses a Data Sync foreground service to communicate non-intrusive sensor data with Pluggable servers, which are used to quantify the engagement of the user in real-time. The foreground service must start as soon as the user opts to participate in the event (so that it can collect and communicate data) and must keep running until the user himself decides to terminate his/her participation.
     ```
 
 ### Push Notifications
 
-If you want a fully **plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate `Firebase Cloud Messaging`. A complete, step-by-step tutorial is available in [Firebase's wiki](https://firebase.google.com/docs/cloud-messaging). The steps are as follows:
+If you want a fully **plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate `Firebase Cloud Messaging`. A complete, step-by-step tutorial is available in [Firebase's official documentation](https://firebase.google.com/docs/cloud-messaging). The steps are as follows:
 
 1. First install [FlutterFire](https://firebase.flutter.dev/docs/overview/), a tool which automatically configures your app to use firebase;
 
@@ -60,22 +81,23 @@ If you want a fully **plug-&-play experience** and wish to receive push notifica
 
 3. Then, to start using the Cloud Messaging package within your project follow these [steps](https://firebase.flutter.dev/docs/messaging/usage);
 
-4. Integrating the Cloud Messaging plugin on iOS requires additional setup before your devices receive messages. The full steps are available [here](https://firebase.flutter.dev/docs/messaging/apple-integration), but the following prerequisites are required to be able to enable messaging:
+4. Integrating the Cloud Messaging plugin on iOS requires additional setup before your devices receive messages. The full steps are available in the [official docs](https://firebase.google.com/docs/cloud-messaging/flutter/get-started#ios-setup-requirements), but the following prerequisites are required to be able to enable messaging:
     + You must have an active Apple Developer Account;
     + You must have a physical iOS device to receive messages.
 
 5. Also for iOS:
-    + If you are using swift, in your `AppDelegate.swift` make sure you have added the first code;
-    + If you're using flutter with objective-c, add the second code to your `appdelegate.m` file.
+    + If you are using Swift, in your `AppDelegate.swift` make sure you have added this code:
 
-    ```
+    ```swift
     import Firebase
-
+    
     FirebaseApp.configure() //add this before the code below
     GeneratedPluginRegistrant.register(with: self)
     ```
 
-    ```
+    + If you're using flutter with Objective-C, add this code to your `appdelegate.m` file.
+
+    ```objective-c
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
         [FIRApp configure]; //add this at the top
         // ...
@@ -92,7 +114,7 @@ Few steps are required to be ready to use this SDK.
 
 After configuring your app to integrate with FCM, you are ready to use this plugin to properly engage with your fans! To install the plugin just run, in the root of the project:
 
-```
+```bash
 flutter pub add fanmeter
 ```
 
@@ -104,20 +126,30 @@ For **Android**, to customize the used notification icon, just add the desired i
 
 The `initialize` method is mandatory for both plug-&-play and build your own UI scenarios. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it in the app's main activity). It returns success or an error code.
 
-```
+```dart
 import 'package:fanmeter/fanmeter.dart';
 
 // ...
 
+/// The name of your company in Fanmeter
 String YOUR_COMPANY_NAME = 'companyName'
+/// Your company's license key
 String YOUR_COMPANY_KEY = 'AAAA-BBBB-CCCC-DDDD'
+/// The user identifier in your db (can be the username, the uuid, ...)
 String USER_ID = 'externalUserId'
+/// The individual smartphone identifier (allows for the same account in different devices)
 String TOKEN_ID = 'externalTokenId'
+/// The user's ticket number - used for additional analytics. Nullable
 String? USER_EMAIL = 'externalUserEmail'
+/// The FCM token id of the user. Nullable
 String? FCM_TOKEN = 'fcm_token'
+/// The user's ticket number - used for additional analytics. Nullable
 String? TICKET_NUMBER = 'ticket_number'
+/// The stand where the user is - used for additional analytics. Nullable
 String? TICKET_STAND = 'ticket_stand'
+/// The URL to the regulation for your events. Nullable
 String? REGULATION_URL = 'https://link.to.the.regulation'
+/// Enables additional logging
 bool? FANMETER_LOG = false;
 
 final _fanmeterPlugin = Fanmeter();
@@ -138,22 +170,10 @@ final result = await _fanmeterPlugin.initialize(
 print("[FANMETER - INITIALIZE]: $result");
 ```
 
-Where:
-  * YOUR_COMPANY_NAME, the name of your company in Fanmeter;
-  * YOUR_COMPANY_KEY, your company's license key;
-  * USER_ID, the user identifier in your db (can be the username, the uuid, ...);
-  * TOKEN_ID, the individual smartphone identifier (allows for the same account in different devices);
-  * USER_EMAIL, the user's email. Nullable;
-  * FCM_TOKEN, the FCM token id of the user. Nullable;
-  * TICKET_NUMBER, the user's ticket number - used for additional analytics. Nullable;
-  * TICKET_STAND, the stand where the user is - used for additional analytics. Nullable;
-  * REGULATION_URL, the URL to the regulation for your events. Nullable;
-  * FANMETER_LOG, enables additional logging.
+The `getEventData()` method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null, or not provided, this returns the closest event to date:
 
-
-The `getEventData`()` method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null, or not provided, this returns the closest event to date:
-
-```
+```dart
+/// Event id to show (nullable)
 String? EVENT_NAME = 'Round 1 2025-2026'
 
 // After initialized, you will be able to use the SDK methods.
@@ -174,16 +194,17 @@ In both scenarios, you can subscribe to a listener that will notify you whenever
 Two methods are available: `subscribeUserParticipationListener` and `unsubscribeUserParticipationListener`. The first method subscribes the listener to a specific event id, and you can subscribe to multiple events. The second method unsubscribes the listener (if no event id is provided, it will unsubscribe all active listeners).
 
 While the `unsubscribeUserParticipationListener` method always returns 1 (Success), as it forces the stop of any or all running listeners, the `subscribeUserParticipationListener` listener can return the following status codes:
-  * 0: User is not participating;
-  * 1: Validating the user participation (validation may take up to 30 seconds);
-  * 2: User is participating;
-  * 3: User has GPS disabled;
-  * 4: User is out of venue;
-  * 5: Unknown GPS coordinates.
+
++ 0: User is not participating;
++ 1: Validating the user participation (validation may take up to 30 seconds);
++ 2: User is participating;
++ 3: User has GPS disabled;
++ 4: User is out of venue;
++ 5: Unknown GPS coordinates.
 
 These methods can be invoked as shown below:
 
-```
+```dart
 // Subscribing a listener.
 await _fanmeterPlugin.subscribeUserParticipationListener(EVENT_ID, ((value) {
     print("[FANMETER - SUBSCRIBEUSERPARTICIPATION] $EVENT_ID: $value");
@@ -191,22 +212,23 @@ await _fanmeterPlugin.subscribeUserParticipationListener(EVENT_ID, ((value) {
 }));
 ```
 
-```
+```dart
 // Unsubscribing a listener. If no event id is set, it cancels all listeners.
 final result = await _fanmeterPlugin.unsubscribeUserParticipationListener();
 print("[FANMETER - UNSUBSCRIBEUSERPARTICIPATION]: $result");
 ```
 
-### Plug-&-Play UI
+## Plug-&-Play UI
 
 After initializing the Plugin, you are now ready to start calling Fanmeter. In particular, if you want to automate the entire process, this library exposes three methods, that must be called as demonstrated below. In particular:
-  * `execute`, launches the SDK Fanmeter default's view as soon as a Fanmeter notification is tapped by the user;
-  * `launchFanmeterNotification`, launches a local Fanmeter notification to the user, which is required by Android when the app is in the foreground;
-  * `launchFanmeterView`, launches the SDK Fanmeter default's view. It can be associated with a button or banner in your app, redirecting the user to the Fanmeter native view, allowing users without notification permissions to participate in the event. It will open the Fanmeter view with the event with the closest date to the current date.
 
-The `execute` method is used for backgrounded processes and will open the default Fanmeter view to the user. On the other hand, the `launchFanmeterNotification` method launches a local notification when the Android app is in a foreground state. An example is as follows, used in your *.dart* files as demonstrated in the next lines. 
++ `execute`, launches the SDK Fanmeter default's view as soon as a Fanmeter notification is tapped by the user;
++ `launchFanmeterNotification`, launches a local Fanmeter notification to the user, which is required by Android when the app is in the foreground;
++ `launchFanmeterView`, launches the SDK Fanmeter default's view. It can be associated with a button or banner in your app, redirecting the user to the Fanmeter native view, allowing users without notification permissions to participate in the event. It will open the Fanmeter view with the event with the closest date to the current date.
 
-```
+The `execute` method is used for backgrounded processes and will open the default Fanmeter view to the user. On the other hand, the `launchFanmeterNotification` method launches a local notification when the Android app is in a foreground state. An example is as follows, used in your *.dart* files as demonstrated in the next lines.
+
+```dart
 import 'package:fanmeter/fanmeter.dart';
 
 // ...
@@ -218,7 +240,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     // make sure you call `initializeApp` before using other Firebase services.
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
-	);
+    );
     
     Map<String, String> notificationData = message.data.map((key, value) => MapEntry(key, value.toString()));
 
@@ -277,12 +299,16 @@ void initState() {
 ```
 
 Where:
-  * notificationData, is the remote data received with the notification;
-  * NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the app's default view).
+
++ notificationData, is the remote data received with the notification;
++ NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the app's default view).
 
 Finally, the `launchFanmeterView` method should be called on a button click, redirecting users to Fanmeter's default UI. This method accepts an eventId, that should be obtained using the `getEventData` method. If a null eventId is passed, this method will open the closest available event to the current date.
 
-```
+```dart
+/// Event id to show (nullable)
+String? EVENT_NAME = 'Round 1 2025-2026'
+
 // Launch view!
 final result = await _fanmeterPlugin.launchFanmeterView(EVENT_ID);
 print("[FANMETER - LAUNCHFANMETERVIEW - EVENTID]: $result");
@@ -294,41 +320,40 @@ final result = await _fanmeterPlugin.launchFanmeterView();
 print("[FANMETER - LAUNCHFANMETERVIEW]: $result");
 ```
 
-Where:
-  * EVENT_ID, is the event id to show (nullable).
-
 These functions return the following values:
-  * 1, success;
-  * -80, no GPS/PUSH permissions;
-  * -81, GPS disabled;
-  * -82, invalid event coordinates;
-  * -89, SDK not initialized;
-  * -91, invalid notification data;
-  * -92, invalid company license;
-  * -93, invalid event;
-  * -94, event not happening now;
-  * -95, invalid external user data;
-  * -96, failed to get event data;
-  * -97, failed to start the Fanmeter service;
-  * -98, another Fanmeter service is already running.
+
++ 1, success;
++ -80, no GPS/PUSH permissions;
++ -81, GPS disabled;
++ -82, invalid event coordinates;
++ -89, SDK not initialized;
++ -91, invalid notification data;
++ -92, invalid company license;
++ -93, invalid event;
++ -94, event not happening now;
++ -95, invalid external user data;
++ -96, failed to get event data;
++ -97, failed to start the Fanmeter service;
++ -98, another Fanmeter service is already running.
 
 You are also required to subscribe the user to a FCM topic so that the user can receive Fanmeter notifications. This can be done, for example, as follows:
 
-```
+```dart
 // Subscribe to specific topic.
 await FirebaseMessaging.instance.subscribeToTopic('football_senior');
 ```
 
-### Build your own UI
+## Build your own UI
 
 If you want full control and implement your own UI, this library exposes three methods, that must be called as demonstrated below. In particular:
-  * `startService`, starts the Fanmeter service that enables Fanmeter for your client's device during a particular event;
-  * `stopService`, stops the Fanmeter service. The service will, still, terminate automatically as soon as the event ends. This returns 1, if success, otherwise an error code;
-  * `isServiceRunning`, used to check the current status of the Fanmeter service. Returns 1, if the service is running, otherwise 0.
+
++ `startService`, starts the Fanmeter service that enables Fanmeter for your client's device during a particular event;
++ `stopService`, stops the Fanmeter service. The service will, still, terminate automatically as soon as the event ends. This returns 1, if success, otherwise an error code;
++ `isServiceRunning`, used to check the current status of the Fanmeter service. Returns 1, if the service is running, otherwise 0.
 
 The `startService` method is used to start the Fanmeter service. This method accepts an eventId, that should be obtained using the `getEventData` method and should be called as follows (associated, for example, to a particular button):
 
-```
+```dart
 // You can obtain the eventId of an event by calling the getEventData method.
 final result = await _fanmeterPlugin.startService(
     EVENT_ID, 
@@ -338,43 +363,44 @@ print("[FANMETER - STARTSERVICE]: $result");
 ```
 
 Where:
-  * EVENT_ID, the id of the event the user will participate when the start service is called;
-  * NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the app's default view).
+
++ EVENT_ID, the id of the event the user will participate when the start service is called;
++ NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the app's default view).
 
 This method returns the following values:
-  * 1, success;
-  * -80, no GPS/PUSH permissions;
-  * -81, GPS disabled;
-  * -82, invalid event coordinates;
-  * -89, SDK not initialized;
-  * -92, invalid company license;
-  * -93, invalid event;
-  * -94, event not happening now;
-  * -95, invalid external user data;
-  * -96, failed to get event data;
-  * -97, failed to start the Fanmeter service;
-  * -98, another Fanmeter service is already running.
 
++ 1, success;
++ -80, no GPS/PUSH permissions;
++ -81, GPS disabled;
++ -82, invalid event coordinates;
++ -89, SDK not initialized;
++ -92, invalid company license;
++ -93, invalid event;
++ -94, event not happening now;
++ -95, invalid external user data;
++ -96, failed to get event data;
++ -97, failed to start the Fanmeter service;
++ -98, another Fanmeter service is already running.
 
 The `stopService` method is used to stop the Fanmeter service (can be toggled with the previous method). Even if the user does not explicitly stop the service, it will automatically stop as soon as the event finishes. This returns 1, if success, otherwise an error code.
 
-```
+```dart
 final result = await _fanmeterPlugin.stopService();
 print("[FANMETER - STOPSERVICE]: $result");
 ```
 
 Finally, the `isServiceRunning` method is used to check the current status of the Fanmeter service. This returns 1, if the service is running, otherwise 0.
 
-```
+```dart
 final result = await _fanmeterPlugin.isServiceRunning();
 print("[FANMETER - ISSERVICERUNNING]: $result");
 ```
 
-### Additional info
+## Additional info
 
 Other important methods are to **request user permission** to be able to **send notifications** and **request GPS permission**. Also, **get the user token and listen for changes** to get the user FCM_TOKEN and update it when it changes.
 
-```
+```dart
 Future requestPermission() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     // Ask for push permissions.
@@ -406,4 +432,4 @@ Future<void> setupToken() async {
 
 In addition, **prevent multiple calls to the launchFanmeterView** method so that it is only triggered when no previous call is in progress.
 
-For full compatibility, attention to the used versions of XCODE, SWIFT and COCOAPODS. Recommended versions are **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**. For more info visit https://pluggableai.xyz/ or give us feedback to info@pluggableai.xyz.
+For more info visit [our website](https://pluggableai.xyz/) or give us feedback to <info@pluggableai.xyz>.
