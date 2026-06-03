@@ -108,7 +108,7 @@ dependencies:
 
 ### Initialize Method
 
-The `initialize` method is mandatory for both plug-&-play. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it in the app's main activity). It returns an auth token on success, `"Invalid parameters"` if the provided map is invalid, or `null` otherwise.
+The `initialize` method is mandatory for plug-&-play. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it in the app's main activity). It returns an auth token on success, `"Invalid parameters"` if the provided map is invalid, or `null` otherwise.
 
 ```dart
 import 'package:fanmeter/fanmeter.dart';
