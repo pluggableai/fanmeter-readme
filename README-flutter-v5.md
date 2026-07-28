@@ -222,7 +222,9 @@ dependencies:
   webview_flutter: ^4.0.0
 ```
 
-Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up. A convenient way is to wrap this in an `openFanzoneView` helper that the plug-&-play flow (below) calls right after `execute` returns an event:
+Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up. A convenient way is to wrap this in an `openFanzoneView` helper that the plug-&-play flow (below) calls right after `execute` returns an event.
+
+Since the app owns the WebView, it's also responsible for the system back button/gesture: by default it closes the whole screen instead of stepping back through the Fanzone SPA's own navigation. Wrap it with `FanmeterBackHandler`, which steps back through the SPA's own navigation first (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered), as shown below:
 
 ```dart
 import 'package:fanmeter/fanmeter_web_interface.dart';
@@ -246,11 +248,14 @@ void openFanzoneView(int eventId) {
         Uri.parse('https://data.fanofthematch.ai/fanzone/fotm?eventId=$eventId'),
         headers: {'Authorization': 'Bearer ${authToken ?? ''}'},
     );
-    // 3. Present the WebView in your widget tree.
+    // 3. Present the WebView in your widget tree, wrapped with FanmeterBackHandler.
     navigatorKey.currentState?.push(
         MaterialPageRoute(
-            builder: (_) => Scaffold(
-                body: SafeArea(child: WebViewWidget(controller: controller)),
+            builder: (_) => FanmeterBackHandler(
+                controller: controller,
+                child: Scaffold(
+                    body: SafeArea(child: WebViewWidget(controller: controller)),
+                ),
             ),
         ),
     );
@@ -337,6 +342,29 @@ void initState() {
     // Handle notification tap.
     setupInteractedMessage();
     // ...
+}
+```
+
+On **Android**, the notification launched by `launchFanmeterNotification` above is a *local* notification — tapping it is a separate event from the `onMessageOpenedApp`/`getInitialMessage` handling above (which only fires for pushes delivered directly by FCM). Use `getInitialNotificationClick` and `onNotificationClick` to detect that tap and feed its extras into `execute`, the same way as a tapped push notification. This is not needed on iOS, where the SDK handles the tap natively:
+
+```dart
+Future<void> setupInteractedMessage() async {
+    // ... FCM handling from above ...
+
+    // Handle a tap on a Fanmeter *local* notification (Android only).
+    final initialNotificationClick = await _fanmeterPlugin.getInitialNotificationClick();
+    if(initialNotificationClick != null) {
+        _handleNotificationClick(initialNotificationClick);
+    }
+    _fanmeterPlugin.onNotificationClick.listen(_handleNotificationClick);
+}
+
+void _handleNotificationClick(Map<String, String> notificationData) async {
+    final (code, eventId) = await _fanmeterPlugin.execute(notificationData, null);
+    print("[FANMETER - EXECUTE]: code=$code, eventId=$eventId");
+    if(eventId != null) {
+        openFanzoneView(eventId);
+    }
 }
 ```
 
