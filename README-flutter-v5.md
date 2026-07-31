@@ -224,7 +224,14 @@ dependencies:
 
 Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up. A convenient way is to wrap this in an `openFanzoneView` helper that the plug-&-play flow (below) calls right after `execute` returns an event.
 
-Since the app owns the WebView, it's also responsible for the system back button/gesture: by default it closes the whole screen instead of stepping back through the Fanzone SPA's own navigation. Wrap it with `FanmeterBackHandler`, which steps back through the SPA's own navigation first (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered), as shown below:
+Your app keeps full ownership of the WebView — it loads the URL and places the `WebViewWidget` in its own tree — and the SDK shows its own localized GPS permission dialogs when they are needed, so you do not have to build them yourself.
+
+Two things to keep in mind:
+
++ `makeController()` is asynchronous — `await` it **before** calling `loadRequest`, otherwise the bridge is not yet available to the page being loaded.
++ Do not call `enableZoom` on the returned controller: it resets the WebView's user scripts, which would remove the bridge.
+
+Since the app owns the WebView, it's also responsible for the system back button/gesture: by default it closes the whole screen instead of stepping back through the Fanzone SPA's own navigation. Wrap it with `FanmeterBackHandler`, which steps back through the SPA's own navigation first (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered). Likewise, the web layer can ask to close the screen itself (e.g. a back button in the Fanzone appbar, via `window.FanmeterBridge.closeWebView()`); `makeController` exposes this as the `onCloseRequested` callback, which you should wire to pop the same route:
 
 ```dart
 import 'package:fanmeter/fanmeter_web_interface.dart';
@@ -240,9 +247,13 @@ final navigatorKey = GlobalKey<NavigatorState>();
 /// Opens the Fanzone view for a given event, passing the auth token obtained
 /// from `initialize` as an `Authorization: Bearer` header. `authToken` is the
 /// shared variable set by the `initialize` call above.
-void openFanzoneView(int eventId) {
-    // 1. Create a pre-configured WebViewController with the Fanmeter bridge.
-    final controller = FanmeterWebInterface.makeController();
+Future<void> openFanzoneView(int eventId) async {
+    // 1. Create a pre-configured WebViewController with the Fanmeter bridge,
+    //    closing the pushed route when the web layer requests it.
+    //    Awaited so the native bridge is installed before the page loads.
+    final controller = await FanmeterWebInterface.makeController(
+        onCloseRequested: () => navigatorKey.currentState?.pop(),
+    );
     // 2. Load the Fanzone URL for the event.
     controller.loadRequest(
         Uri.parse('https://data.fanofthematch.ai/fanzone/fotm?eventId=$eventId'),
