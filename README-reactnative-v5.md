@@ -278,6 +278,20 @@ A few things to keep in mind:
 
   * The `containerProps` must go on a plain `<View>` wrapping the `<WebView>`. That wrapper is how the plugin reaches the native WebView, since react-native-webview's own ref is an imperative handle rather than a view;
   * The hook only hands `webViewProps.source` over once the bridge is installed, so the WebView stays blank for a moment before the Fanzone loads. That is deliberate: the bridge is injected at document start and only applies to page loads started after it, so loading the URL yourself would leave the page without `window.FanmeterBridge`;
+  * Because of that blank page, a loading indicator has to ignore it: `onLoadStart`, `onLoadProgress` and `onLoadEnd` fire for it too, so an indicator that hides on the first `onLoadEnd` disappears before the Fanzone even starts loading. Filter by the URL each callback reports:
+
+    ```tsx
+    const isFanzone = (url?: string) => !!url && !url.startsWith('about:');
+
+    <WebView
+        {...fanzone.webViewProps}
+        onLoadProgress={({ nativeEvent }) => { if(isFanzone(nativeEvent.url)) setProgress(nativeEvent.progress); }}
+        onLoadEnd={({ nativeEvent }) => { if(isFanzone(nativeEvent.url)) setIsLoaded(true); }}
+        // Without this, a failed load would leave the indicator up forever.
+        onError={() => setIsLoaded(true)}
+    />
+    ```
+
   * Do not override `source`, `onNavigationStateChange` or `javaScriptEnabled` on the `<WebView>` - they are what the bridge needs to work. Every other prop is yours;
   * Switching targets while the screen is up - a notification tapped while the Fanzone is already open - is handled for you: the new URL loads into the same WebView, and the plugin makes that page the root of the WebView's history, so the Android back leaves the screen instead of walking into the Fanzone the user came from.
 
