@@ -219,17 +219,18 @@ To use it, add `webview_flutter` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  webview_flutter: ^4.0.0
+  webview_flutter: ^4.10.0
 ```
 
 Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up. A convenient way is to wrap this in an `openFanzoneView` helper that the plug-&-play flow (below) calls right after `execute` returns an event.
 
 Your app keeps full ownership of the WebView — it loads the URL and places the `WebViewWidget` in its own tree — and the SDK shows its own localized GPS permission dialogs when they are needed, so you do not have to build them yourself.
 
-Two things to keep in mind:
+Three things to keep in mind:
 
 + `makeController()` is asynchronous — `await` it **before** calling `loadRequest`, otherwise the bridge is not yet available to the page being loaded.
 + Do not call `enableZoom` on the returned controller: it resets the WebView's user scripts, which would remove the bridge.
++ Do not call `setNavigationDelegate` on it either — on Android that replaces the native `WebViewClient`, and with it the protection that keeps your app process alive (and the Fanmeter service running) when the system reclaims the WebView's renderer. Pass the callbacks to `makeController` instead: it accepts `onPageStarted`, `onPageFinished`, `onProgress`, `onNavigationRequest`, `onUrlChange`, `onWebResourceError`, `onHttpError` and `onHttpAuthRequest`, which it forwards to the delegate for you.
 
 Since the app owns the WebView, it's also responsible for the system back button/gesture: by default it closes the whole screen instead of stepping back through the Fanzone SPA's own navigation. Wrap it with `FanmeterBackHandler`, which steps back through the SPA's own navigation first (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered). Likewise, the web layer can ask to close the screen itself (e.g. a back button in the Fanzone appbar, via `window.FanmeterBridge.closeWebView()`); `makeController` exposes this as the `onCloseRequested` callback, which you should wire to pop the same route:
 
@@ -272,6 +273,40 @@ Future<void> openFanzoneView(int eventId) async {
     );
 }
 ```
+
+### Showing a loading indicator
+
+Since `makeController()` is asynchronous, awaiting it *before* pushing the route leaves the user on the previous screen, with no feedback, until the WebView is ready. Push the route first and create the controller inside it, using the callbacks above to drive the indicator — `onProgress` for the load progress, `onPageFinished` to hide it, and `onWebResourceError` so a failed load does not leave it up forever:
+
+```dart
+Future<void> _openFanzone() async {
+    final controller = await FanmeterWebInterface.makeController(
+        onCloseRequested: () {
+            if(mounted) Navigator.of(context).pop();
+        },
+        onPageStarted: (_) => _setLoading(true),
+        onProgress: (progress) {
+            if(mounted) setState(() => _progress = progress);
+        },
+        onPageFinished: (_) => _setLoading(false),
+        onWebResourceError: (error) {
+            if(error.isForMainFrame ?? false) _setLoading(false);
+        },
+    );
+    if(!mounted) return;
+    // Matches the screen's own background, so the WebView does not flash a
+    // different colour before the page paints.
+    await controller.setBackgroundColor(Theme.of(context).scaffoldBackgroundColor);
+    controller.loadRequest(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer ${authToken ?? ''}'},
+    );
+    if(!mounted) return;
+    setState(() => _controller = controller);
+}
+```
+
+The `WebViewWidget` is then placed in a `Stack`, only once the controller exists, with the indicator on top while `_loading` is true.
 
 ## Plug-&-Play UI
 
