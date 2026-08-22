@@ -8,6 +8,7 @@ The Fanmeter plugin is the one responsible for enabling Fanmeter in any mobile a
 + [Pre-Conditions](#pre-conditions)
   + [Compatibility](#compatibility)
   + [Meta-Data](#meta-data)
+  + [Google Play Policy Declarations](#google-play-policy-declarations)
   + [Push Notifications](#push-notifications)
 + [Set up the Fanmeter Plugin in your Flutter App](#set-up-the-fanmeter-plugin-in-your-flutter-app)
   + [Install the Plugin](#install-the-plugin)
@@ -56,7 +57,13 @@ For iOS, add the **Background Modes** capability and enable **Location Updates**
 <string>Location access is required to participate in Fanmeter events!</string>
 ```
 
-Note that, for Android only, Fanmeter is required to use a **Data Sync foreground service** to communicate non-intrusive sensor data with Pluggable's server. Since API 34 of Android, when publishing an app that uses such services, you are required to fill a **Policy Declaration** where you must justify the need for such services. In Fanmeter's case, when filling such policy, you will be asked the question "*What tasks require your app to use the FOREGROUND_SERVICE_DATA_SYNC permission?*". There, you should:
+### Google Play Policy Declarations
+
+For **Android only**, when publishing to the Google Play Store an app that integrates Fanmeter, you are required to fill a **Policy Declaration** justifying two sensitive permissions Fanmeter relies on: the **Data Sync foreground service** and **background location**.
+
+#### Foreground Service (Data Sync)
+
+Fanmeter is required to use a **Data Sync foreground service** to communicate non-intrusive sensor data with Pluggable's server. Since API 34 of Android, when publishing an app that uses such services, you must justify the need for it. You will be asked the question "*What tasks require your app to use the FOREGROUND_SERVICE_DATA_SYNC permission?*". There, you should:
 
 1. Select the option **OTHER** in **Other tasks**;
 
@@ -70,6 +77,29 @@ Note that, for Android only, Fanmeter is required to use a **Data Sync foregroun
 
     ```txt
     Fanmeter is an Android SDK, incorporated in this app, that uses a Data Sync foreground service to communicate non-intrusive sensor data with Pluggable servers, which are used to quantify the engagement of the user in real-time. The foreground service must start as soon as the user opts to participate in the event (so that it can collect and communicate data) and must keep running until the user himself decides to terminate his/her participation.
+    ```
+
+#### Access Background Location
+
+Fanmeter relies on **background location** to guarantee that only fans physically present at the venue can participate, and to keep validating that presence throughout the whole match without forcing the fan to keep the app open. When publishing an app that requests the `ACCESS_BACKGROUND_LOCATION` permission, Google Play requires a **Background Location Policy Declaration**, where you must justify the feature with the app purpose, the reason background access is needed, and a demonstration video:
+
+1. Provide the **app purpose**:
+
+    ```txt
+    This app powers the FAN OF THE MATCH, a digital activation that identifies and quantifies the fans who show the most support during a match by measuring emotional engagement through non-intrusive smartphone sensors. To ensure that only fans physically present at the venue can participate, continuous location validation is essential. This verification must be maintained throughout the entire match, guaranteeing that participation is exclusive to attendees at the venue.
+    ```
+
+2. Justify **why background location is required**:
+
+    ```txt
+    Since events can last hours, it is essential that fans can participate even when they are not actively using the app. Without background location, they would be forced to continuously interact with the app, which goes against the essence of the FAN OF THE MATCH - allow fans to engage naturally and immerse without distractions. Background location access is fundamental, ensuring a seamless and fair experience by enabling participation without interrupting the enjoyment of the match.
+    ```
+
+3. Provide a demonstration video link (either of the following):
+
+    ```txt
+    https://youtu.be/w4d7Pgksok0
+    https://www.youtube.com/watch?v=6trJOoCGfGU
     ```
 
 ### Push Notifications
