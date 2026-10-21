@@ -31,7 +31,7 @@ There are two possible types of integration. One is plug-&-play and uses a defau
 
 ### Compatibility
 
-For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
+For full compatibility, be sure to use the recommended versions: **XCODE=26** (or later, as required by the App Store), **SWIFT=6.2**, and **FLUTTER=3.24** (or later). On iOS, the plugin requires **iOS 15.0** or later and supports both Swift Package Manager (the default since Flutter 3.44) and CocoaPods (**COCOAPODS=1.16.2**, only if your app has not migrated to Swift Package Manager yet).
 
 ### Meta-Data
 
@@ -126,7 +126,7 @@ For **Android**, to customize the used notification icon, just add the desired i
 
 ### Methods initialize and getEventData
 
-The `initialize` method is mandatory for both plug-&-play and build your own UI scenarios. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it before launching the FOTM). It returns an auth token on success, `Invalid parameters` if the provided map is invalid, or `null` otherwise.
+The `initialize` method is mandatory for both plug-&-play and build your own UI scenarios. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it before launching the FOTM). It returns an auth token on success, or `null` otherwise.
 
 ```dart
 import 'package:fanmeter/fanmeter.dart';
