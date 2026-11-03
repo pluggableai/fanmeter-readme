@@ -4,29 +4,38 @@ The Fanmeter SDK is the one responsible for enabling Fanmeter in any mobile appl
 
 ## Table of Contents
 
-+ [Plug-&-Play vs Build your own UI](#plug--play-vs-build-your-own-ui)
-+ [Pre-Conditions](#pre-conditions)
++ [Overview](#overview)
++ [Requirements](#requirements)
   + [Compatibility](#compatibility)
   + [Meta-Data](#meta-data)
-  + [Push Notifications](#push-notifications)
-+ [Set up the Fanmeter SDK in your iOS App](#set-up-the-fanmeter-sdk-in-your-ios-app)
-  + [Import the SDK](#import-the-sdk)
-  + [Methods initialize and getEventData](#methods-initialize-and-geteventdata)
-  + [Listeners for User Participation](#listeners-for-user-participation)
-+ [Fanzone Web View](#fanzone-web-view)
++ [Getting Started](#getting-started)
+  + [1. Install the SDK](#1-install-the-sdk)
+  + [2. Set up push notifications](#2-set-up-push-notifications)
+  + [3. Initialize the SDK](#3-initialize-the-sdk)
+  + [4. Handle Fanmeter notifications](#4-handle-fanmeter-notifications)
 + [Plug-&-Play UI](#plug--play-ui)
+  + [5. Add the Fanzone screen](#5-add-the-fanzone-screen)
+  + [6. Open the Fanzone from your app](#6-open-the-fanzone-from-your-app)
 + [Build your own UI](#build-your-own-ui)
-+ [Additional info](#additional-info)
+  + [5. Get the event](#5-get-the-event)
+  + [6. Build your event screen](#6-build-your-event-screen)
+  + [7. Listen to the user's participation (optional)](#7-listen-to-the-users-participation-optional)
++ [Reference](#reference)
+  + [Methods](#methods)
+  + [Return codes](#return-codes)
+  + [Participation states](#participation-states)
 
-## Plug-&-Play vs Build your own UI
+## Overview
 
-There are two possible types of integration. One is plug-&-play and uses the Fanzone, Pluggable's web-based activation interface, that you present to your users for them to participate in Fanmeter events - it is also able to launch and deliver push notifications as soon as the event starts and finishes, if you configure it. If, on the other hand, you wish to create your own Fanmeter UI, you will follow a "build your own UI" approach.
+There are two possible types of integration. One is plug-&-play and uses the Fanzone, Pluggable's web-based activation interface, that you present to your users for them to participate in Fanmeter events. If, on the other hand, you wish to create your own Fanmeter UI, you will follow a "build your own UI" approach.
 
-  1. **Plug-&-Play UI**: you want everything automated (including the Fanzone view). You should also integrate with FCM to handle received notifications that start the event (in summary, you'll need to use the *execute* method, plus the [Fanzone Web View](#fanzone-web-view));
+  1. **[Plug-&-Play UI](#plug--play-ui)** (recommended): you want everything automated (including the Fanzone view);
 
-  2. **Build your own UI**: you want to handle the conditions yourself and develop your own UI (just call the *startService*, *stopService*, and *isServiceRunning* methods).
+  2. **[Build your own UI](#build-your-own-ui)**: you want to handle the conditions yourself and develop your own UI (calling the *startService*, *stopService*, and *isServiceRunning* methods).
 
-## Pre-Conditions
+Both integrations start by meeting the [Requirements](#requirements) and following the [Getting Started](#getting-started) steps (1 to 4). Then, follow the steps of the integration you chose. Every step is required, unless marked as optional.
+
+## Requirements
 
 ### Compatibility
 
@@ -54,46 +63,13 @@ Add the **Background Modes** capability and enable **Location Updates**. Additio
 <string>Location access is required to participate in Fanmeter events!</string>
 ```
 
-Location permission is necessary for fans to participate in geo-restricted events, but you do not need to request it yourself: whenever a service is started, the SDK asks the user for the location permission and, if only the approximate location was granted, for the precise one (using the `PreciseLocationRequired` key above). Push notification permission, on the other hand, must be requested by your app (see [Plug-&-Play UI](#plug--play-ui)).
+Location permission is necessary for fans to participate in geo-restricted events, but you do not need to request it yourself: whenever a service is started, the SDK asks the user for the location permission and, if only the approximate location was granted, for the precise one (using the `PreciseLocationRequired` key above). Push notification permission, on the other hand, must be requested by your app (see [step 2](#2-set-up-push-notifications)).
 
-### Push Notifications
+## Getting Started
 
-If you want a **fully plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate [Firebase Cloud Messaging (FCM)](https://firebase.google.com/docs/cloud-messaging/ios/get-started). A complete, step-by-step tutorial is available in [Firebase's official documentation](https://firebase.google.com/docs/cloud-messaging).
+### 1. Install the SDK
 
-In Xcode, go to your target's **Signing & Capabilities** tab and add the **Push Notifications** capability (the **Remote notifications** background mode is already enabled by the `Info.plist` code above).
-
-Fanmeter notifications may carry an image. To display it, add a **Notification Service Extension** to your project, following Apple's guide on [modifying content in newly delivered notifications](https://developer.apple.com/documentation/usernotifications/modifying_content_in_newly_delivered_notifications), and let FCM populate the notification content:
-
-```swift
-import UserNotifications
-import FirebaseMessaging
-
-class NotificationService: UNNotificationServiceExtension {
-
-    var contentHandler: ((UNNotificationContent) -> Void)?
-    var bestAttemptContent: UNMutableNotificationContent?
-
-    override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-        self.contentHandler = contentHandler
-        bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
-        if let bestAttemptContent = bestAttemptContent {
-            Messaging.serviceExtension().populateNotificationContent(bestAttemptContent, withContentHandler: contentHandler)
-        }
-    }
-
-    // ...
-}
-```
-
-**NOTE**: FCM via APNs **does not work on iOS Simulators**. To receive messages & notifications a real device is required.
-
-## Set up the Fanmeter SDK in your iOS App
-
-Few steps are required to be ready to use this SDK.
-
-### Import the SDK
-
-After configuring your app to integrate with FCM, you are ready to use this SDK to properly engage with your fans! There are two approaches to include it in your app:
+There are two approaches to include the SDK in your app:
 
 1. Using [CocoaPods](https://cocoapods.org/pods/fanmeter_sdk_ios), by adding the SDK to your `Podfile` (check which version is the latest) and running `pod install`:
 
@@ -113,9 +89,58 @@ import fanmeter_sdk_ios
 
 Objective-C apps can use `EntryPointBridge`, which exposes the same methods as `EntryPoint`.
 
-### Methods initialize and getEventData
+### 2. Set up push notifications
 
-The `initialize` method is mandatory for both plug-&-play and build your own UI scenarios. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it as soon as the app finishes launching). It returns, in its callback, an auth token on success, or nil otherwise.
+Fanmeter notifications reach your app through [Firebase Cloud Messaging (FCM)](https://firebase.google.com/docs/cloud-messaging/ios/get-started) - if not done already, integrate it and add the **Push Notifications** capability to your target. Then, as soon as the app finishes launching, set the `UNUserNotificationCenter` delegate (through which the notification taps reach your app), ask for the push notification permission, and register the app for remote notifications (`AppDelegate.swift`):
+
+```swift
+import UIKit
+import FirebaseCore
+import FirebaseMessaging
+import UserNotifications
+import fanmeter_sdk_ios
+
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        FirebaseApp.configure()
+        Messaging.messaging().delegate = self
+        // Set before launching ends, so a tap that launched the app is also delivered.
+        UNUserNotificationCenter.current().delegate = self
+        // Ask for the push notification permission.
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in }
+        application.registerForRemoteNotifications()
+        // Initialize the SDK as early as possible (step 3).
+        // EntryPoint.initialize(...)
+        return true
+    }
+}
+```
+
+If you're using **SwiftUI**, attach this app delegate to your `App` struct via `@UIApplicationDelegateAdaptor(AppDelegate.self)`.
+
+You are also **required to subscribe the user to a FCM topic** so that the user can receive Fanmeter notifications. This can be done in the FCM delegate, which also receives the user's FCM token (to pass as `fcmToken` in step 3) - it fires at each app startup and whenever a new token is generated:
+
+```swift
+extension AppDelegate: MessagingDelegate {
+
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        NSLog("TOKEN is: \(String(describing: fcmToken))")
+        // Subscribe to a topic.
+        Messaging.messaging().subscribe(toTopic: "football_senior") { _ in
+            NSLog("Subscribed to topic: football_senior!")
+        }
+    }
+}
+```
+
+Fanmeter notifications may carry an image. To display it, add a **Notification Service Extension**, as described in [Firebase's documentation](https://firebase.google.com/docs/cloud-messaging/ios/send-image).
+
+**NOTE**: FCM via APNs **does not work on iOS Simulators**. To receive messages & notifications a real device is required.
+
+### 3. Initialize the SDK
+
+The `initialize` method is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it as soon as the app finishes launching). It returns, in its callback, an auth token on success, or nil otherwise.
 
 ```swift
 import fanmeter_sdk_ios
@@ -146,8 +171,8 @@ EntryPoint.initialize(
     log: FANMETER_LOG
 ) { token in
     NSLog("EntryPoint.initialize: \(String(describing: token))")
-    // Keep the auth token where the Fanzone view can reach it, since the Fanzone (see below)
-    // needs it to load its page.
+    // Plug-&-Play UI: keep the auth token where the Fanzone view can reach it, since the
+    // Fanzone (step 5) needs it to load its page.
     Fanzone.shared.authToken = token
 }
 ```
@@ -166,63 +191,51 @@ Optional keys (the map does not take nil values, so leave out the ones you do no
 Additional parameter:
   * FANMETER_LOG, enables additional logging.
 
-The `getEventData` method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If nil, or not provided, this returns the closest event to date:
+### 4. Handle Fanmeter notifications
+
+The `execute` method is called when a Fanmeter notification is tapped - whether the app was in the foreground, in the background, or terminated. It does not open any view itself - its callback returns a `(code, eventId)` pair and, when `eventId` is not nil, your app is responsible for opening the screen of that event: the Fanzone, in the Plug-&-Play UI, or your own event screen, in the Build your own UI. Also, since iOS does not display notifications that arrive while the app is in the foreground, implement `willPresent` so the user still sees (and can tap) them:
 
 ```swift
-let EVENT_NAME: String = "Round 1 2025-2026"
+extension AppDelegate: UNUserNotificationCenterDelegate {
 
-// After initialized, you will be able to use the SDK methods.
-EntryPoint.getEventData(eventTitle: EVENT_NAME) { eventData in
-    let eventId = eventData["eventId"] as? Int ?? -99
-    NSLog("EntryPoint.getEventData(\(EVENT_NAME)): \(eventId)")
-}
+    // Called when the user taps a notification.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        EntryPoint.execute(notificationData: userInfo) { code, eventId in
+            NSLog("EntryPoint.execute: \(String(describing: code)), \(String(describing: eventId))")
+            // `execute` does not open any view - when an eventId is returned, your app
+            // is responsible for opening the screen of that event.
+            if let eventId = eventId {
+                // Plug-&-Play UI (step 5). In the Build your own UI, open your own event screen instead.
+                Fanzone.shared.openEvent(eventId)
+            }
+        }
+        completionHandler()
+    }
 
-// OR.
-
-// After initialized, you will be able to use the SDK methods.
-EntryPoint.getEventData() { eventData in
-    let eventId = eventData["eventId"] as? Int ?? -99
-    NSLog("EntryPoint.getEventData(): \(eventId)")
+    // Called when a notification arrives while the app is in the foreground.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .list, .sound])
+        } else {
+            completionHandler([.alert, .sound])
+        }
+    }
 }
 ```
 
-### Listeners for User Participation
+Where:
+  * notificationData (`userInfo`), is the remote data received with the notification.
 
-In both scenarios, you can subscribe to a listener that will notify you whenever there is a change in the user's participation status. For example, if the user leaves the venue of a geo-restricted event, the listener will alert you to this change. This can be particularly useful for updating the status of banners or buttons within your app.
+The possible `code` values are listed in the [Return codes](#return-codes).
 
-Two methods are available: `subscribeUserParticipationListener` and `unsubscribeUserParticipationListener`. The first method subscribes the listener to a specific event id, and you can subscribe to multiple events. The second method unsubscribes the listener (if no event id is provided, it will unsubscribe all active listeners).
+## Plug-&-Play UI
 
-While the `unsubscribeUserParticipationListener` method always returns 1 (Success), as it forces the stop of any or all running listeners, the `subscribeUserParticipationListener` listener can return the following status codes:
-  * 0: User is not participating;
-  * 1: Validating the user participation (validation may take up to 30 seconds);
-  * 2: User is participating;
-  * 3: User has GPS disabled;
-  * 4: User is out of venue;
-  * 5: Unknown GPS coordinates.
+### 5. Add the Fanzone screen
 
-These methods can be invoked as shown below:
+Fanzone is Pluggable's web-based activation interface - it is the view you present to your fans. The Fanmeter SDK ships a built-in JavaScript bridge, `FanmeterWebInterface`, so the Fanzone web app can call native SDK methods directly, without any platform-specific logic on the JavaScript side. The app retains full control over the WebView - the SDK only installs the bridge.
 
-```swift
-// Subscribing a listener. The EVENT_ID (an Int) can be obtained with getEventData.
-EntryPoint.subscribeUserParticipationListener(eventId: EVENT_ID) { state in
-    NSLog("Event \(EVENT_ID) | Participation state changed: \(state)")
-}
-
-// OR.
-
-// Unsubscribing a listener. If no event id is set, it cancels all listeners.
-EntryPoint.unsubscribeUserParticipationListener() { result in
-    NSLog("Unsubscribed with result: \(result)")
-}
-```
-
-## Fanzone Web View
-
-Fanzone is Pluggable's web-based activation interface - it is the view you present to your fans (for example, the one you open after `execute` returns an event). The Fanmeter SDK ships a built-in JavaScript bridge, `FanmeterWebInterface`, so the Fanzone web app can call native SDK methods directly, without any platform-specific logic on the JavaScript side. The app retains full control over the WebView - the SDK only installs the bridge.
-
-Before loading the Fanzone, the SDK must be initialized using the `initialize` method in order to obtain a valid authentication token. This token must then be included in the request used to load the Fanzone page (as an `Authorization: Bearer` header).
-
-There are two URLs to open, depending on how the user got there:
+The Fanzone page is loaded with the auth token returned by `initialize` (as an `Authorization: Bearer` header), and there are two URLs to open, depending on how the user got there:
 
   * `https://data.fanofthematch.ai/fanzone/` - the **Fanzone home**, listing every activation. This is what you open when the user reaches the Fanzone from your app itself: a button, a banner, a navbar item. No event id is involved;
   * `https://data.fanofthematch.ai/fanzone/fotm?eventId=EVENT_ID` - the **Fan of the Match activation for one event**. This is where a tapped Fanmeter notification leads, using the event id that `execute` returned.
@@ -254,7 +267,7 @@ struct FanzoneView: UIViewRepresentable {
 }
 ```
 
-Then, keep what the Fanzone shows in an object that both your views and the `AppDelegate` can reach, which the plug-&-play flow (below) also calls right after `execute` returns an event:
+Then, keep what the Fanzone shows in an object that both your views and the `AppDelegate` can reach. It also prevents multiple openings of the Fanzone view, so that it is only presented when no previous one is on screen:
 
 ```swift
 final class Fanzone: ObservableObject {
@@ -319,123 +332,48 @@ A few things to keep in mind:
 
 The Fanzone ships its own close control, so **you should not render a native header or close button around the WebView** - the web layer already has one, and it closes the screen by calling `window.FanmeterBridge.closeWebView()`. By default, that dismisses the topmost presented view controller, which is enough for a UIKit screen presented modally. If you pass an `onClose` callback, it is invoked instead - in SwiftUI always pass it, wired to the state that presents the Fanzone (as above), since dismissing the view controller behind SwiftUI's back would leave that state out of sync.
 
-## Plug-&-Play UI
+### 6. Open the Fanzone from your app
 
-After initializing the SDK, you are now ready to start calling Fanmeter. In particular, if you want to automate the entire process, this library exposes one method, that must be called as demonstrated below:
-  * `execute`, processes a tapped Fanmeter notification and returns the event the user should be directed to (your app then opens the Fanzone view for that event).
-
-FCM delivers all messages targeting Apple apps through APNs, so the tap reaches your app through the `UNUserNotificationCenter` delegate (see Apple's documentation on [Handling Notifications and Notification-Related Actions](https://developer.apple.com/documentation/usernotifications/handling_notifications_and_notification-related_actions)). Set it, together with the FCM delegate, as soon as the app finishes launching, and register the app for remote notifications (`AppDelegate.swift`):
+From a button, a banner or a navbar item, open the Fanzone home:
 
 ```swift
-import UIKit
-import FirebaseCore
-import FirebaseMessaging
-import UserNotifications
-import fanmeter_sdk_ios
-
-class AppDelegate: UIResponder, UIApplicationDelegate {
-
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        FirebaseApp.configure()
-        Messaging.messaging().delegate = self
-        // Set before launching ends, so a tap that launched the app is also delivered.
-        UNUserNotificationCenter.current().delegate = self
-        // Ask for the push notification permission.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in }
-        application.registerForRemoteNotifications()
-        // Initialize the SDK as early as possible, since the Fanzone needs its auth token.
-        // EntryPoint.initialize(...)
-        return true
-    }
-}
-```
-
-If you're using **SwiftUI**, attach this app delegate to your `App` struct via `UIApplicationDelegateAdaptor`:
-
-```swift
-@main
-struct YourApp: App {
-    // Register the app delegate for Firebase and notifications setup.
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-
-    var body: some Scene {
-        WindowGroup {
-            RootView()
-        }
-    }
-}
-```
-
-The `execute` method is called when a Fanmeter notification is tapped - whether the app was in the foreground, in the background, or terminated. It does not open any view itself - its callback returns a `(code, eventId)` pair and, when `eventId` is not nil, your app is responsible for opening the Fanzone view for that event (see the [Fanzone Web View](#fanzone-web-view) section). Also, since iOS does not display notifications that arrive while the app is in the foreground, implement `willPresent` so the user still sees (and can tap) them:
-
-```swift
-extension AppDelegate: UNUserNotificationCenterDelegate {
-
-    // Called when the user taps a notification.
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        let userInfo = response.notification.request.content.userInfo
-        EntryPoint.execute(notificationData: userInfo) { code, eventId in
-            NSLog("EntryPoint.execute: \(String(describing: code)), \(String(describing: eventId))")
-            // `execute` does not open any view - when an eventId is returned, your app
-            // is responsible for opening the Fanzone view for that event.
-            if let eventId = eventId {
-                Fanzone.shared.openEvent(eventId)
-            }
-        }
-        completionHandler()
-    }
-
-    // Called when a notification arrives while the app is in the foreground.
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        if #available(iOS 14.0, *) {
-            completionHandler([.banner, .list, .sound])
-        } else {
-            completionHandler([.alert, .sound])
-        }
-    }
-}
-```
-
-Where:
-  * notificationData (`userInfo`), is the remote data received with the notification.
-
-The `execute` method returns a `(code, eventId)` pair, where the code is one of the following values:
-  * 1, success;
-  * -80, no GPS/PUSH permissions;
-  * -81, GPS disabled;
-  * -82, invalid event coordinates;
-  * -89, SDK not initialized;
-  * -91, invalid notification data;
-  * -92, invalid company license;
-  * -93, invalid event;
-  * -94, event not happening now;
-  * -95, invalid external user data;
-  * -96, failed to get event data;
-  * -97, failed to start the Fanmeter service;
-  * -98, another Fanmeter service is already running.
-
-You are also **required to subscribe the user to a FCM topic** so that the user can receive Fanmeter notifications. This can be done, for example, as follows:
-
-```swift
-extension AppDelegate: MessagingDelegate {
-
-    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        // Subscribe to a topic.
-        Messaging.messaging().subscribe(toTopic: "football_senior") { _ in
-            NSLog("Subscribed to topic: football_senior!")
-        }
-    }
-}
+Fanzone.shared.openHome()
 ```
 
 ## Build your own UI
 
-If you want full control and implement your own UI, this library exposes three methods, that must be called as demonstrated below. In particular:
-  * `startService`, starts the Fanmeter service that enables Fanmeter for your client's device during a particular event;
-  * `stopService`, stops the Fanmeter service. The service will, still, terminate automatically as soon as the event ends. This returns 1, if success, otherwise an error code;
-  * `isServiceRunning`, used to check the current status of the Fanmeter service. Returns whether it is running and, if so, the event being tracked.
+### 5. Get the event
 
-The `startService` method is used to start the Fanmeter service. This method accepts an eventId, that should be obtained using the `getEventData` method and should be called as follows (associated, for example, to a particular button). When needed, the SDK asks the user for the location permission and for the precise location itself:
+The `getEventData` method is used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If nil, or not provided, this returns the closest event to date:
+
+```swift
+let EVENT_NAME: String = "Round 1 2025-2026"
+
+// After initialized, you will be able to use the SDK methods.
+EntryPoint.getEventData(eventTitle: EVENT_NAME) { eventData in
+    let eventId = eventData["eventId"] as? Int ?? -99
+    NSLog("EntryPoint.getEventData(\(EVENT_NAME)): \(eventId)")
+}
+
+// OR.
+
+// After initialized, you will be able to use the SDK methods.
+EntryPoint.getEventData() { eventData in
+    let eventId = eventData["eventId"] as? Int ?? -99
+    NSLog("EntryPoint.getEventData(): \(eventId)")
+}
+```
+
+### 6. Build your event screen
+
+In this integration, your app is responsible for the screen where the user participates in the event - it is the one you open from your app, and from a notification tap (step 4). It should:
+
+  * Show the event, with the data obtained in the previous step;
+  * Offer a button for the user to join and leave the event, calling `startService` and `stopService`;
+  * Show the current state of that button, with `isServiceRunning`;
+  * Tell the user what went wrong whenever `startService` returns an error code (see the [Return codes](#return-codes)).
+
+The `startService` method is used to start the Fanmeter service that enables Fanmeter for your client's device during a particular event. This method accepts the eventId obtained in the previous step and should be called as follows (associated, for example, to a particular button). When needed, the SDK asks the user for the location permission and for the precise location itself:
 
 ```swift
 // e.g. on a button click.
@@ -443,26 +381,6 @@ EntryPoint.startService(eventId: EVENT_ID) { result in
     NSLog("EntryPoint.startService: \(result)")
 }
 ```
-
-Where:
-  * EVENT_ID, the id of the event the user will participate when the start service is called.
-
-This method returns the following values:
-  * 1, success;
-  * -80, no GPS/PUSH permissions;
-  * -81, GPS disabled;
-  * -82, invalid event coordinates;
-  * -85, restricted location permission;
-  * -86, no precise location permission;
-  * -87, unknown location permission status;
-  * -89, SDK not initialized;
-  * -92, invalid company license;
-  * -93, invalid event;
-  * -94, event not happening now;
-  * -95, invalid external user data;
-  * -96, failed to get event data;
-  * -97, failed to start the Fanmeter service;
-  * -98, another Fanmeter service is already running.
 
 The `stopService` method is used to stop the Fanmeter service (can be toggled with the previous method). Even if the user does not explicitly stop the service, it will automatically stop as soon as the event finishes. This returns 1, if success, otherwise an error code.
 
@@ -480,19 +398,73 @@ EntryPoint.isServiceRunning() { isRunning, eventId in
 }
 ```
 
-## Additional info
+### 7. Listen to the user's participation (optional)
 
-Other important methods are to **request user permission** to be able to **send notifications** (shown in the [Plug-&-Play UI](#plug--play-ui) section). Also, **get the user token and listen for changes** to get the user FCM_TOKEN and update it when it changes.
+You can subscribe to a listener that will notify you whenever there is a change in the user's participation status. For example, if the user leaves the venue of a geo-restricted event, the listener will alert you to this change. This can be particularly useful for updating the status of banners or buttons within your app.
 
-In particular, if you need to know the FCM token ID associated with each user device, the `MessagingDelegate` above receives it - this callback fires at each app startup and whenever a new token is generated:
+Two methods are available: `subscribeUserParticipationListener` and `unsubscribeUserParticipationListener`. The first method subscribes the listener to a specific event id, and you can subscribe to multiple events. The second method unsubscribes the listener (if no event id is provided, it will unsubscribe all active listeners) and always returns 1 (Success), as it forces the stop of any or all running listeners.
 
 ```swift
-func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-    NSLog("TOKEN is: \(String(describing: fcmToken))")
-    // ...
+// Subscribing a listener. The EVENT_ID (an Int) can be obtained with getEventData.
+EntryPoint.subscribeUserParticipationListener(eventId: EVENT_ID) { state in
+    NSLog("Event \(EVENT_ID) | Participation state changed: \(state)")
+}
+
+// OR.
+
+// Unsubscribing a listener. If no event id is set, it cancels all listeners.
+EntryPoint.unsubscribeUserParticipationListener() { result in
+    NSLog("Unsubscribed with result: \(result)")
 }
 ```
 
-In addition, **prevent multiple openings of the Fanzone view** so that it is only presented when no previous one is on screen. The `Fanzone` object from the [Fanzone Web View](#fanzone-web-view) section already does it, ignoring any request to open it while it is presented.
+The possible `state` values are listed in the [Participation states](#participation-states).
+
+## Reference
+
+### Methods
+
+| Method | What it does | Returns |
+| --- | --- | --- |
+| `EntryPoint.initialize` | Initializes the SDK. Required before any other method. | The auth token, or nil. |
+| `EntryPoint.execute` | Processes a tapped Fanmeter notification. | A `(code, eventId)` pair. |
+| `EntryPoint.getEventData` | Gets an event's data (the closest event, if no title is given). | A dictionary. |
+| `EntryPoint.startService` | Starts the Fanmeter service for an event. | A return code. |
+| `EntryPoint.stopService` | Stops the Fanmeter service. | 1, if success, otherwise an error code. |
+| `EntryPoint.isServiceRunning` | Checks the current status of the Fanmeter service. | An `(isRunning, eventId)` pair. |
+| `EntryPoint.subscribeUserParticipationListener` | Notifies every change in the user's participation in an event. | A participation state. |
+| `EntryPoint.unsubscribeUserParticipationListener` | Cancels the listener of an event (or all of them). | Always 1. |
+| `FanmeterWebInterface.attach(to:onClose:)` | Installs the Fanmeter bridge on your `WKWebView`. | The bridge (safe to ignore). |
+| `FanmeterWebInterface.makeWebView()` | Creates a `WKWebView` with the Fanmeter bridge installed. | The `WKWebView`. |
+
+### Return codes
+
+The `execute` and `startService` methods return the following values:
+  * 1, success;
+  * -80, no GPS/PUSH permissions;
+  * -81, GPS disabled;
+  * -82, invalid event coordinates;
+  * -85, restricted location permission (`startService` only);
+  * -86, no precise location permission (`startService` only);
+  * -87, unknown location permission status (`startService` only);
+  * -89, SDK not initialized;
+  * -91, invalid notification data (`execute` only);
+  * -92, invalid company license;
+  * -93, invalid event;
+  * -94, event not happening now;
+  * -95, invalid external user data;
+  * -96, failed to get event data;
+  * -97, failed to start the Fanmeter service;
+  * -98, another Fanmeter service is already running.
+
+### Participation states
+
+The `subscribeUserParticipationListener` listener can return the following status codes:
+  * 0: User is not participating;
+  * 1: Validating the user participation (validation may take up to 30 seconds);
+  * 2: User is participating;
+  * 3: User has GPS disabled;
+  * 4: User is out of venue;
+  * 5: Unknown GPS coordinates.
 
 For more info visit [our website](https://pluggableai.xyz/) or give us feedback to <info@pluggableai.xyz>.
