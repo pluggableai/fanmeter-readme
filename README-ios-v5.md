@@ -39,7 +39,7 @@ Both integrations start by meeting the [Requirements](#requirements) and followi
 
 ### Minimum versions
 
-This SDK requires a minimum deployment target of **iOS 13.0**. For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
+This SDK requires a minimum deployment target of **iOS 13.0**. For full compatibility, be sure to use the recommended versions: **XCODE=26** (or later, as required by the App Store), **SWIFT=6.2**, and **COCOAPODS=1.16.2**.
 
 ### Info.plist and capabilities
 

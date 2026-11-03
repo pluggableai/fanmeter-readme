@@ -40,7 +40,7 @@ Both integrations start by meeting the [Requirements](#requirements) and followi
 
 ### Minimum versions
 
-For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
+For full compatibility, be sure to use the recommended versions: **XCODE=26** (or later, as required by the App Store), **SWIFT=6.2**, and **COCOAPODS=1.16.2**.
 
 For **Android**, this plugin requires a minimum **compileSdk** version of **34**. Make sure your project's `android/build.gradle` file has `compileSdk 34` or higher configured.
 
