@@ -364,7 +364,7 @@ Future<void> setupInteractedMessage() async {
 }
 
 /// Receive pushes while in the foreground.
-/// NOTE: Fanmeter pushes are data-only, so the payload arrives in `message.data`.
+/// NOTE: Fanmeter pushes carry both a notification and a data payload - the SDK only needs `message.data`.
 void _firebaseMessagingForegroundHandler(RemoteMessage message) async {
     Map<String, String> notificationData = message.data.map((key, value) => MapEntry(key, value.toString()));
     final result = await _fanmeterPlugin.launchFanmeterNotification(
