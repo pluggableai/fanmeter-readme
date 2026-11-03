@@ -110,6 +110,20 @@ dependencies {
 
 Then, sync your project with the Gradle files. The libraries the SDK depends on are resolved automatically.
 
+**NOTE**: The examples in this guide are in Kotlin, but the SDK can also be used from Java apps. In Java:
+  * Call the `EntryPoint` methods through its instance - `EntryPoint.INSTANCE.initialize(...)` instead of `EntryPoint.initialize(...)`;
+  * Pass every parameter, including the optional ones (as `null`);
+  * End every callback with `return Unit.INSTANCE;` (from `kotlin.Unit`).
+
+```java
+EntryPoint.INSTANCE.execute(this, getIntent().getExtras(), null, (code, eventId) -> {
+    if(eventId != null) {
+        openFanzoneForEvent(eventId);
+    }
+    return Unit.INSTANCE;
+});
+```
+
 ### 2. Set up push notifications
 
 Fanmeter notifications reach your app through [Firebase Cloud Messaging (FCM)](https://firebase.google.com/docs/cloud-messaging/android/get-started) - if not done already, integrate it. A complete, step-by-step tutorial is available in [Firebase's official documentation](https://firebase.google.com/docs/cloud-messaging).
