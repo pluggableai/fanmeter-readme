@@ -6,8 +6,8 @@ The Fanmeter SDK is the one responsible for enabling Fanmeter in any mobile appl
 
 + [Overview](#overview)
 + [Requirements](#requirements)
-  + [Compatibility](#compatibility)
-  + [Meta-Data](#meta-data)
+  + [Minimum versions](#minimum-versions)
+  + [Info.plist and capabilities](#infoplist-and-capabilities)
 + [Getting Started](#getting-started)
   + [1. Install the SDK](#1-install-the-sdk)
   + [2. Set up push notifications](#2-set-up-push-notifications)
@@ -37,11 +37,11 @@ Both integrations start by meeting the [Requirements](#requirements) and followi
 
 ## Requirements
 
-### Compatibility
+### Minimum versions
 
 This SDK requires a minimum deployment target of **iOS 13.0**. For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
 
-### Meta-Data
+### Info.plist and capabilities
 
 Add the **Background Modes** capability and enable **Location Updates**. Additionally, open your `Info.plist` file and add the following code at the bottom of the file:
 
@@ -233,14 +233,10 @@ The possible `code` values are listed in the [Return codes](#return-codes).
 
 ### 5. Add the Fanzone screen
 
-Fanzone is Pluggable's web-based activation interface - it is the view you present to your fans. The Fanmeter SDK ships a built-in JavaScript bridge, `FanmeterWebInterface`, so the Fanzone web app can call native SDK methods directly, without any platform-specific logic on the JavaScript side. The app retains full control over the WebView - the SDK only installs the bridge.
+Fanzone is Pluggable's web-based activation interface - it is the view you present to your fans. Show it in a `WKWebView` with the Fanmeter JavaScript bridge installed (`FanmeterWebInterface`), loading it with the auth token returned by `initialize` (as an `Authorization: Bearer` header). There are two URLs to open, depending on how the user got there:
 
-The Fanzone page is loaded with the auth token returned by `initialize` (as an `Authorization: Bearer` header), and there are two URLs to open, depending on how the user got there:
-
-  * `https://data.fanofthematch.ai/fanzone/` - the **Fanzone home**, listing every activation. This is what you open when the user reaches the Fanzone from your app itself: a button, a banner, a navbar item. No event id is involved;
-  * `https://data.fanofthematch.ai/fanzone/fotm?eventId=EVENT_ID` - the **Fan of the Match activation for one event**. This is where a tapped Fanmeter notification leads, using the event id that `execute` returned.
-
-To use it, create a `WKWebView` and call `FanmeterWebInterface.attach(to:onClose:)` on it before loading the Fanzone URL. Your app keeps full ownership of the WebView - it creates it, loads the URL and decides how the screen is presented - and the SDK shows its own localized GPS permission dialogs when they are needed, so you do not have to build them yourself.
+  * `https://data.fanofthematch.ai/fanzone/` - the **Fanzone home**, opened from your app itself (a button, a banner, a navbar item);
+  * `https://data.fanofthematch.ai/fanzone/fotm?eventId=EVENT_ID` - the **Fan of the Match activation for one event**, opened from a tapped Fanmeter notification, using the event id that `execute` returned.
 
 ```swift
 import SwiftUI
@@ -267,7 +263,7 @@ struct FanzoneView: UIViewRepresentable {
 }
 ```
 
-Then, keep what the Fanzone shows in an object that both your views and the `AppDelegate` can reach. It also prevents multiple openings of the Fanzone view, so that it is only presented when no previous one is on screen:
+Then, keep what the Fanzone shows in an object that both your views and the `AppDelegate` can reach (it also prevents multiple openings of the Fanzone view):
 
 ```swift
 final class Fanzone: ObservableObject {
@@ -324,13 +320,12 @@ struct RootView: View {
 }
 ```
 
-A few things to keep in mind:
+Two rules to keep in mind:
 
-  * Call `attach(to:onClose:)` **before** loading the page: the bridge is injected at document start and only applies to page loads started after it, so loading the URL first would leave the page without `window.FanmeterBridge`;
-  * The WebView keeps the bridge alive, so you do not need to hold a reference to it;
-  * If your app uses UIKit, `FanmeterWebInterface.makeWebView()` returns a `WKWebView` with the bridge already installed - load the Fanzone request on it as above.
+  * Call `attach(to:onClose:)` **before** loading the page, otherwise the page is left without the bridge;
+  * **Do not render a native header or close button around the WebView**: the Fanzone has its own, which calls `onClose` (in SwiftUI, always pass it, wired to the state that presents the Fanzone, as above).
 
-The Fanzone ships its own close control, so **you should not render a native header or close button around the WebView** - the web layer already has one, and it closes the screen by calling `window.FanmeterBridge.closeWebView()`. By default, that dismisses the topmost presented view controller, which is enough for a UIKit screen presented modally. If you pass an `onClose` callback, it is invoked instead - in SwiftUI always pass it, wired to the state that presents the Fanzone (as above), since dismissing the view controller behind SwiftUI's back would leave that state out of sync.
+If your app uses UIKit, `FanmeterWebInterface.makeWebView()` returns a `WKWebView` with the bridge already installed - load the Fanzone request on it as above. Presented modally, it closes itself without an `onClose`.
 
 ### 6. Open the Fanzone from your app
 
