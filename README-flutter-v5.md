@@ -40,7 +40,7 @@ Both integrations start by meeting the [Requirements](#requirements) and followi
 
 ### Minimum versions
 
-For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
+For full compatibility, be sure to use the recommended versions: **XCODE=26** (or later, as required by the App Store), **SWIFT=6.2**, and **FLUTTER=3.24** (or later). On iOS, the plugin requires **iOS 15.0** or later and supports both Swift Package Manager (the default since Flutter 3.44) and CocoaPods (**COCOAPODS=1.16.2**, only if your app has not migrated to Swift Package Manager yet).
 
 ### Permissions and Info.plist
 
@@ -142,7 +142,7 @@ For **Android**, to customize the used notification icon, just add the desired i
 
 ### 3. Initialize the plugin
 
-The `initialize` method is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it before launching the FOTM). It returns an auth token on success, `Invalid parameters` if the provided map is invalid, or `null` otherwise.
+The `initialize` method is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it before launching the FOTM). It returns an auth token on success, or `null` otherwise.
 
 ```dart
 import 'package:fanmeter/fanmeter.dart';
@@ -334,7 +334,7 @@ To use it, add `webview_flutter` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  webview_flutter: ^4.0.0
+  webview_flutter: ^4.10.0
 ```
 
 Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up, in an `openFanzone` helper used both from your app (step 6) and from a tapped notification (step 4):
@@ -390,8 +390,43 @@ Rules to keep in mind:
 
 + `makeController()` is asynchronous — `await` it **before** calling `loadRequest`, otherwise the bridge is not yet available to the page being loaded;
 + Do not call `enableZoom` on the returned controller: it resets the WebView's user scripts, which would remove the bridge;
++ Do not call `setNavigationDelegate` on it either — on Android that replaces the native `WebViewClient`, and with it the protection that keeps your app process alive (and the Fanmeter service running) when the system reclaims the WebView's renderer. Pass the callbacks to `makeController` instead: it accepts `onPageStarted`, `onPageFinished`, `onProgress`, `onNavigationRequest`, `onUrlChange`, `onWebResourceError`, `onHttpError` and `onHttpAuthRequest`, which it forwards to the delegate for you;
 + **Do not render a native header or close button around the WebView**: the Fanzone has its own, which calls `onCloseRequested` - wire it to pop the same route (as above);
 + Wrap the WebView with `FanmeterBackHandler`, so the system back steps back through the Fanzone's own navigation first, instead of closing the whole screen (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered).
+
+#### Showing a loading indicator
+
+Since `makeController()` is asynchronous, awaiting it *before* pushing the route leaves the user on the previous screen, with no feedback, until the WebView is ready. Push the route first and create the controller inside it, using the callbacks above to drive the indicator — `onProgress` for the load progress, `onPageFinished` to hide it, and `onWebResourceError` so a failed load does not leave it up forever:
+
+```dart
+Future<void> _openFanzone() async {
+    final controller = await FanmeterWebInterface.makeController(
+        onCloseRequested: () {
+            if(mounted) Navigator.of(context).pop();
+        },
+        onPageStarted: (_) => _setLoading(true),
+        onProgress: (progress) {
+            if(mounted) setState(() => _progress = progress);
+        },
+        onPageFinished: (_) => _setLoading(false),
+        onWebResourceError: (error) {
+            if(error.isForMainFrame ?? false) _setLoading(false);
+        },
+    );
+    if(!mounted) return;
+    // Matches the screen's own background, so the WebView does not flash a
+    // different colour before the page paints.
+    await controller.setBackgroundColor(Theme.of(context).scaffoldBackgroundColor);
+    controller.loadRequest(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer ${authToken ?? ''}'},
+    );
+    if(!mounted) return;
+    setState(() => _controller = controller);
+}
+```
+
+The `WebViewWidget` is then placed in a `Stack`, only once the controller exists, with the indicator on top while `_loading` is true.
 
 ### 6. Open the Fanzone from your app
 

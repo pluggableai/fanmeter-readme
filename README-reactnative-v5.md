@@ -407,6 +407,20 @@ Rules to keep in mind:
 
   * The `containerProps` must go on a plain `<View>` wrapping the `<WebView>` - that wrapper is how the plugin reaches the native WebView;
   * Do not override `source`, `onNavigationStateChange` or `javaScriptEnabled` on the `<WebView>` - they are what the bridge needs to work. The WebView stays blank for a moment before the Fanzone loads, until the bridge is installed - that is deliberate;
+  * Because of that blank page, a loading indicator has to ignore it: `onLoadStart`, `onLoadProgress` and `onLoadEnd` fire for it too, so an indicator that hides on the first `onLoadEnd` disappears before the Fanzone even starts loading. Filter by the URL each callback reports:
+
+    ```tsx
+    const isFanzone = (url?: string) => !!url && !url.startsWith('about:');
+
+    <WebView
+        {...fanzone.webViewProps}
+        onLoadProgress={({ nativeEvent }) => { if(isFanzone(nativeEvent.url)) setProgress(nativeEvent.progress); }}
+        onLoadEnd={({ nativeEvent }) => { if(isFanzone(nativeEvent.url)) setIsLoaded(true); }}
+        // Without this, a failed load would leave the indicator up forever.
+        onError={() => setIsLoaded(true)}
+    />
+    ```
+
   * **Do not render a native header or close button around the WebView**: the Fanzone has its own, which calls `onCloseRequested` - wire it to whatever dismisses the screen. On Android, the hardware back calls it too, once there is nothing left to go back to in the Fanzone, so if it is a no-op the app quits.
 
 If you would rather wire your own WebView by hand, `attachWebInterface(viewOrTag, { onCloseRequested })` is the lower-level call the hook is built on, and must be awaited before the Fanzone URL is loaded.
