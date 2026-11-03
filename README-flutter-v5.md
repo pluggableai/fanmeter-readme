@@ -4,36 +4,45 @@ The Fanmeter plugin is the one responsible for enabling Fanmeter in any mobile a
 
 ## Table of Contents
 
-+ [Plug-&-Play vs Build your own UI](#plug--play-vs-build-your-own-ui)
-+ [Pre-Conditions](#pre-conditions)
-  + [Compatibility](#compatibility)
-  + [Meta-Data](#meta-data)
-  + [Google Play Policy Declarations](#google-play-policy-declarations)
-  + [Push Notifications](#push-notifications)
-+ [Set up the Fanmeter Plugin in your Flutter App](#set-up-the-fanmeter-plugin-in-your-flutter-app)
-  + [Install the Plugin](#install-the-plugin)
-  + [Methods initialize and getEventData](#methods-initialize-and-geteventdata)
-  + [Listeners for User Participation](#listeners-for-user-participation)
-+ [Fanzone Web View](#fanzone-web-view)
++ [Overview](#overview)
++ [Requirements](#requirements)
+  + [Minimum versions](#minimum-versions)
+  + [Permissions and Info.plist](#permissions-and-infoplist)
+  + [Google Play policy declarations](#google-play-policy-declarations)
++ [Getting Started](#getting-started)
+  + [1. Install the plugin](#1-install-the-plugin)
+  + [2. Set up push notifications](#2-set-up-push-notifications)
+  + [3. Initialize the plugin](#3-initialize-the-plugin)
+  + [4. Handle Fanmeter notifications](#4-handle-fanmeter-notifications)
 + [Plug-&-Play UI](#plug--play-ui)
+  + [5. Add the Fanzone screen](#5-add-the-fanzone-screen)
+  + [6. Open the Fanzone from your app](#6-open-the-fanzone-from-your-app)
 + [Build your own UI](#build-your-own-ui)
-+ [Additional info](#additional-info)
+  + [5. Get the event](#5-get-the-event)
+  + [6. Build your event screen](#6-build-your-event-screen)
+  + [7. Listen to the user's participation (optional)](#7-listen-to-the-users-participation-optional)
++ [Reference](#reference)
+  + [Methods](#methods)
+  + [Return codes](#return-codes)
+  + [Participation states](#participation-states)
 
-## Plug-&-Play vs Build your own UI
+## Overview
 
-There are two possible types of integration. One is plug-&-play and uses a default native UI that is launched to your users for them to participate in FOTM events - it is also able to launch and deliver push notifications as soon as the event starts and finishes, if you configure it. If, on the other hand, you wish to create your own FOTM UI, you will follow a "build your own UI" approach.
+There are two possible types of integration. One is plug-&-play and uses the Fanzone, Pluggable's web-based activation interface, that you present to your users for them to participate in Fanmeter events. If, on the other hand, you wish to create your own Fanmeter UI, you will follow a "build your own UI" approach.
 
-  1. **Plug-&-Play UI**: you want everything automated (including a default Fanmeter view). You should also integrate with FCM to handle received notifications that start the event (in summary, you'll need to use the *execute* and *launchFanmeterNotification* methods together with the embedded FOTM web view);
+  1. **[Plug-&-Play UI](#plug--play-ui)** (recommended): you want everything automated (including the Fanzone view);
 
-  2. **Build your own UI**: you want to handle the conditions yourself and develop your own UI (just call the *startService*, *stopService*, and *isServiceRunning* methods).
+  2. **[Build your own UI](#build-your-own-ui)**: you want to handle the conditions yourself and develop your own UI (calling the *startService*, *stopService*, and *isServiceRunning* methods).
 
-## Pre-Conditions
+Both integrations start by meeting the [Requirements](#requirements) and following the [Getting Started](#getting-started) steps (1 to 4). Then, follow the steps of the integration you chose. Every step is required, unless marked as optional.
 
-### Compatibility
+## Requirements
+
+### Minimum versions
 
 For full compatibility, be sure to use the recommended versions: **XCODE=15**, **SWIFT=5.9**, and **COCOAPODS=1.14.2**.
 
-### Meta-Data
+### Permissions and Info.plist
 
 On Android, push notification permission is required to inform the user that a foreground service is running. Additionally, Location permission is necessary for fans to participate in geo-restricted events. Make sure to request these permissions.
 
@@ -57,7 +66,7 @@ For iOS, add the **Background Modes** capability and enable **Location Updates**
 <string>Location access is required to participate in Fanmeter events!</string>
 ```
 
-### Google Play Policy Declarations
+### Google Play policy declarations
 
 For **Android only**, when publishing to the Google Play Store an app that integrates Fanmeter, you are required to fill a **Policy Declaration** justifying two sensitive permissions Fanmeter relies on: the **Data Sync foreground service** and **background location**.
 
@@ -102,19 +111,11 @@ Fanmeter relies on **background location** to guarantee that only fans physicall
     https://www.youtube.com/watch?v=6trJOoCGfGU
     ```
 
-### Push Notifications
+## Getting Started
 
-If you want a fully **plug-&-play experience** and wish to receive push notifications (if not receiving yet) from Fanmeter in your app, you should integrate `Firebase Cloud Messaging`. A complete, step-by-step tutorial is available in [Firebase's official documentation](https://firebase.google.com/docs/cloud-messaging).
+### 1. Install the plugin
 
-**NOTE**: FCM via APNs **does not work on iOS Simulators**. To receive messages & notifications a real device is required. The same is recommended for Android.
-
-## Set up the Fanmeter Plugin in your Flutter App
-
-Few steps are required to be ready to use this SDK.
-
-### Install the Plugin
-
-After configuring your app to integrate with FCM, you are ready to use this plugin to properly engage with your fans! To install the plugin just run, in the root of the project:
+To install the plugin just run, in the root of the project:
 
 ```bash
 flutter pub add fanmeter
@@ -122,11 +123,26 @@ flutter pub add fanmeter
 
 Or run `flutter pub upgrade` to update to the latest compatible versions of all the dependencies listed in the **pubspec.yaml** file.
 
+### 2. Set up push notifications
+
+Fanmeter notifications reach your app through `Firebase Cloud Messaging` - if not done already, integrate it. A complete, step-by-step tutorial is available in [Firebase's official documentation](https://firebase.google.com/docs/cloud-messaging).
+
+Then, **request user permission** to be able to **send notifications**, and **get the user token and listen for changes** to get the user FCM_TOKEN (to pass as `fcmToken` in step 3) and update it when it changes.
+
+You are also **required to subscribe the user to a FCM topic** so that the user can receive Fanmeter notifications. This can be done, for example, as follows:
+
+```dart
+// Subscribe to specific topic.
+await FirebaseMessaging.instance.subscribeToTopic('football_senior');
+```
+
 For **Android**, to customize the used notification icon, just add the desired icon in the Android's drawable folder and name it **ic_push_app_icon**. Otherwise, a default icon, not related to your app, will be used.
 
-### Methods initialize and getEventData
+**NOTE**: FCM via APNs **does not work on iOS Simulators**. To receive messages & notifications a real device is required. The same is recommended for Android.
 
-The `initialize` method is mandatory for both plug-&-play and build your own UI scenarios. It is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it before launching the FOTM). It returns an auth token on success, `Invalid parameters` if the provided map is invalid, or `null` otherwise.
+### 3. Initialize the plugin
+
+The `initialize` method is responsible for initializing the SDK and must be invoked before using any other method (a possible approach is to invoke it before launching the FOTM). It returns an auth token on success, `Invalid parameters` if the provided map is invalid, or `null` otherwise.
 
 ```dart
 import 'package:fanmeter/fanmeter.dart';
@@ -152,9 +168,9 @@ bool FANMETER_LOG = false;
 
 final _fanmeterPlugin = Fanmeter();
 
-/// Keep the auth token at a scope both your init flow and the Fanzone helper
-/// can reach (e.g. a top-level variable or a field in your app state/service),
-/// since `openFanzoneView` (see below) needs it to load the Fanzone page.
+/// Plug-&-Play UI: keep the auth token at a scope both your init flow and the
+/// Fanzone helper can reach (e.g. a top-level variable or a field in your app
+/// state/service), since `openFanzone` (step 5) needs it to load the Fanzone page.
 String? authToken;
 
 // When the Fanmeter SDK is initialized, it initializes all company and user data.
@@ -191,133 +207,22 @@ Additional parameter:
 
 + `log`, enables additional logging.
 
-The `getEventData()` method can be used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null, or not provided, this returns the closest event to date:
+### 4. Handle Fanmeter notifications
 
-```dart
-/// Event name to show (nullable)
-String? EVENT_NAME = 'Round 1 2026-2027';
+This library exposes two methods to handle Fanmeter notifications, that must be called as demonstrated below:
 
-// After initialized, you will be able to use the SDK methods.
-final result = await _fanmeterPlugin.getEventData(EVENT_NAME);
-print("[FANMETER - GETEVENTDATA - $EVENT_NAME]: $result");
-
-// OR.
-
-// After initialized, you will be able to use the SDK methods.
-final result = await _fanmeterPlugin.getEventData();
-print("[FANMETER - GETEVENTDATA]: $result");
-```
-
-### Listeners for User Participation
-
-In both scenarios, you can subscribe to a listener that will notify you whenever there is a change in the user's participation status. For example, if the user leaves the venue of a geo-restricted event, the listener will alert you to this change. This can be particularly useful for updating the status of banners or buttons within your app.
-
-Two methods are available: `subscribeUserParticipationListener` and `unsubscribeUserParticipationListener`. The first method subscribes the listener to a specific event id, and you can subscribe to multiple events. The second method unsubscribes the listener (if no event id is provided, it will unsubscribe all active listeners).
-
-While the `unsubscribeUserParticipationListener` method always returns 1 (Success), as it forces the stop of any or all running listeners, the `subscribeUserParticipationListener` listener can return the following status codes:
-
-+ 0: User is not participating;
-+ 1: Validating the user participation (validation may take up to 30 seconds);
-+ 2: User is participating;
-+ 3: User has GPS disabled;
-+ 4: User is out of venue;
-+ 5: Unknown GPS coordinates.
-
-These methods can be invoked as shown below:
-
-```dart
-// Subscribing a listener.
-await _fanmeterPlugin.subscribeUserParticipationListener(EVENT_ID, ((value) {
-    print("[FANMETER - SUBSCRIBEUSERPARTICIPATION] $EVENT_ID: $value");
-    // Update the status of your button/banner.
-}));
-```
-
-```dart
-// Unsubscribing a listener. If no event id is set, it cancels all listeners.
-final result = await _fanmeterPlugin.unsubscribeUserParticipationListener();
-print("[FANMETER - UNSUBSCRIBEUSERPARTICIPATION]: $result");
-```
-
-## Fanzone Web View
-
-Fanzone is Pluggable's web-based activation interface — it is the view you present to your fans (for example, the one you open after `execute` returns an event). The Fanmeter plugin ships a built-in JavaScript bridge so the Fanzone web app can call native SDK methods directly, without any platform-specific logic on the JavaScript side. The app retains full control over the WebView — the plugin only configures the bridge.
-
-Before loading the Fanzone, the SDK must be initialized using the `initialize` method in order to obtain a valid authentication token. This token must then be included in the request used to load the Fanzone page (as an `Authorization: Bearer` header).
-
-To use it, add `webview_flutter` to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  webview_flutter: ^4.0.0
-```
-
-Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up. A convenient way is to wrap this in an `openFanzoneView` helper that the plug-&-play flow (below) calls right after `execute` returns an event.
-
-Your app keeps full ownership of the WebView — it loads the URL and places the `WebViewWidget` in its own tree — and the SDK shows its own localized GPS permission dialogs when they are needed, so you do not have to build them yourself.
-
-Two things to keep in mind:
-
-+ `makeController()` is asynchronous — `await` it **before** calling `loadRequest`, otherwise the bridge is not yet available to the page being loaded.
-+ Do not call `enableZoom` on the returned controller: it resets the WebView's user scripts, which would remove the bridge.
-
-Since the app owns the WebView, it's also responsible for the system back button/gesture: by default it closes the whole screen instead of stepping back through the Fanzone SPA's own navigation. Wrap it with `FanmeterBackHandler`, which steps back through the SPA's own navigation first (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered). Likewise, the web layer can ask to close the screen itself (e.g. a back button in the Fanzone appbar, via `window.FanmeterBridge.closeWebView()`); `makeController` exposes this as the `onCloseRequested` callback, which you should wire to pop the same route:
-
-```dart
-import 'package:fanmeter/fanmeter_web_interface.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-
-// ...
-
-// Global navigator key so the Fanzone view can be pushed from anywhere
-// (e.g. from a push notification handler). Wire it into your MaterialApp:
-// MaterialApp(navigatorKey: navigatorKey, ...).
-final navigatorKey = GlobalKey<NavigatorState>();
-
-/// Opens the Fanzone view for a given event, passing the auth token obtained
-/// from `initialize` as an `Authorization: Bearer` header. `authToken` is the
-/// shared variable set by the `initialize` call above.
-Future<void> openFanzoneView(int eventId) async {
-    // 1. Create a pre-configured WebViewController with the Fanmeter bridge,
-    //    closing the pushed route when the web layer requests it.
-    //    Awaited so the native bridge is installed before the page loads.
-    final controller = await FanmeterWebInterface.makeController(
-        onCloseRequested: () => navigatorKey.currentState?.pop(),
-    );
-    // 2. Load the Fanzone URL for the event.
-    controller.loadRequest(
-        Uri.parse('https://data.fanofthematch.ai/fanzone/fotm?eventId=$eventId'),
-        headers: {'Authorization': 'Bearer ${authToken ?? ''}'},
-    );
-    // 3. Present the WebView in your widget tree, wrapped with FanmeterBackHandler.
-    navigatorKey.currentState?.push(
-        MaterialPageRoute(
-            builder: (_) => FanmeterBackHandler(
-                controller: controller,
-                child: Scaffold(
-                    body: SafeArea(child: WebViewWidget(controller: controller)),
-                ),
-            ),
-        ),
-    );
-}
-```
-
-## Plug-&-Play UI
-
-After initializing the Plugin, you are now ready to start calling Fanmeter. In particular, if you want to automate the entire process through push notifications, this library exposes two methods, that must be called as demonstrated below. In particular:
-
-+ `execute`, processes a tapped Fanmeter notification and returns the event the user should be directed to (your app then opens the Fanzone view for that event);
++ `execute`, processes a tapped Fanmeter notification and returns the event the user should be directed to;
 + `launchFanmeterNotification`, launches a local Fanmeter notification to the user, which is required by Android when the app is in the foreground.
 
-The `execute` method is called when a Fanmeter notification is tapped. It does not open any view itself — it returns a `(int? code, int? eventId)` record and, when `eventId` is not null, your app is responsible for opening the Fanzone view for that event (see the [Fanzone Web View](#fanzone-web-view) section). On the other hand, the `launchFanmeterNotification` method launches a local notification when the Android app is in a foreground state. An example is as follows, used in your *.dart* files as demonstrated in the next lines.
+The `execute` method is called when a Fanmeter notification is tapped. It does not open any view itself — it returns a `(int? code, int? eventId)` record and, when `eventId` is not null, your app is responsible for opening the screen of that event: the Fanzone, in the Plug-&-Play UI, or your own event screen, in the Build your own UI. On the other hand, the `launchFanmeterNotification` method launches a local notification when the Android app is in a foreground state. An example is as follows, used in your *.dart* files as demonstrated in the next lines.
 
 ```dart
 import 'package:fanmeter/fanmeter.dart';
 
 // ...
 
-// `openFanzoneView` is the helper defined in the "Fanzone Web View" section above.
+// `openFanzoneForEvent` is the Plug-&-Play UI helper defined in step 5.
+// In the Build your own UI, open your own event screen instead.
 
 /// Receive push while in the background.
 /// NOTE: this runs in a separate background isolate with no widget tree, so it
@@ -347,9 +252,9 @@ void _handlePushTap(RemoteMessage message) async {
     );
     print("[FANMETER - EXECUTE]: code=$code, eventId=$eventId");
     // `execute` does not open any view — when an eventId is returned, your app
-    // is responsible for opening the Fanzone view for that event.
+    // is responsible for opening the screen of that event.
     if(eventId != null) {
-        openFanzoneView(eventId);
+        openFanzoneForEvent(eventId);
     }
 }
 
@@ -404,7 +309,7 @@ void _handleNotificationClick(Map<String, String> notificationData) async {
     final (code, eventId) = await _fanmeterPlugin.execute(notificationData, null);
     print("[FANMETER - EXECUTE]: code=$code, eventId=$eventId");
     if(eventId != null) {
-        openFanzoneView(eventId);
+        openFanzoneForEvent(eventId);
     }
 }
 ```
@@ -414,38 +319,119 @@ Where:
 + notificationData, is the remote data received with the notification;
 + NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the FOTM's default web view).
 
-The `execute` method returns a `(int? code, int? eventId)` record — `code` is the status of the operation and `eventId` identifies the event whose Fanzone view your app should open (if any). These functions return the following `code` values:
+The possible `code` values are listed in the [Return codes](#return-codes).
 
-+ 1, success;
-+ -80, no GPS/PUSH permissions;
-+ -81, GPS disabled;
-+ -82, invalid event coordinates;
-+ -89, SDK not initialized;
-+ -91, invalid notification data;
-+ -92, invalid company license;
-+ -93, invalid event;
-+ -94, event not happening now;
-+ -95, invalid external user data;
-+ -96, failed to get event data;
-+ -97, failed to start the Fanmeter service;
-+ -98, another Fanmeter service is already running.
+## Plug-&-Play UI
 
-You are also required to subscribe the user to a FCM topic so that the user can receive Fanmeter notifications. This can be done, for example, as follows:
+### 5. Add the Fanzone screen
+
+Fanzone is Pluggable's web-based activation interface — it is the view you present to your fans. The Fanmeter plugin ships a built-in JavaScript bridge so the Fanzone web app can call native SDK methods directly, loaded with the auth token returned by `initialize` (as an `Authorization: Bearer` header). There are two URLs to open, depending on how the user got there:
+
++ `https://data.fanofthematch.ai/fanzone/` - the **Fanzone home**, opened from your app itself (a button, a banner, a navbar item);
++ `https://data.fanofthematch.ai/fanzone/fotm?eventId=EVENT_ID` - the **Fan of the Match activation for one event**, opened from a tapped Fanmeter notification, using the event id that `execute` returned.
+
+To use it, add `webview_flutter` to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  webview_flutter: ^4.0.0
+```
+
+Then import `FanmeterWebInterface` and call `makeController()`, which returns a pre-configured `WebViewController` with the Fanmeter bridge already set up, in an `openFanzone` helper used both from your app (step 6) and from a tapped notification (step 4):
 
 ```dart
-// Subscribe to specific topic.
-await FirebaseMessaging.instance.subscribeToTopic('football_senior');
+import 'package:fanmeter/fanmeter_web_interface.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+// ...
+
+// Global navigator key so the Fanzone view can be pushed from anywhere
+// (e.g. from a push notification handler). Wire it into your MaterialApp:
+// MaterialApp(navigatorKey: navigatorKey, ...).
+final navigatorKey = GlobalKey<NavigatorState>();
+
+const FANZONE_URL = 'https://data.fanofthematch.ai/fanzone/';
+
+/// Opens the Fanzone view with a given URL, passing the auth token obtained
+/// from `initialize` as an `Authorization: Bearer` header. `authToken` is the
+/// shared variable set by the `initialize` call (step 3).
+Future<void> openFanzone(String url) async {
+    // 1. Create a pre-configured WebViewController with the Fanmeter bridge,
+    //    closing the pushed route when the web layer requests it.
+    //    Awaited so the native bridge is installed before the page loads.
+    final controller = await FanmeterWebInterface.makeController(
+        onCloseRequested: () => navigatorKey.currentState?.pop(),
+    );
+    // 2. Load the Fanzone URL.
+    controller.loadRequest(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer ${authToken ?? ''}'},
+    );
+    // 3. Present the WebView in your widget tree, wrapped with FanmeterBackHandler.
+    navigatorKey.currentState?.push(
+        MaterialPageRoute(
+            builder: (_) => FanmeterBackHandler(
+                controller: controller,
+                child: Scaffold(
+                    body: SafeArea(child: WebViewWidget(controller: controller)),
+                ),
+            ),
+        ),
+    );
+}
+
+// From a button/banner/navbar: the Fanzone home.
+Future<void> openFanzoneHome() => openFanzone(FANZONE_URL);
+// From a tapped notification: the FOTM activation of the event execute returned.
+Future<void> openFanzoneForEvent(int eventId) => openFanzone('${FANZONE_URL}fotm?eventId=$eventId');
+```
+
+Rules to keep in mind:
+
++ `makeController()` is asynchronous — `await` it **before** calling `loadRequest`, otherwise the bridge is not yet available to the page being loaded;
++ Do not call `enableZoom` on the returned controller: it resets the WebView's user scripts, which would remove the bridge;
++ **Do not render a native header or close button around the WebView**: the Fanzone has its own, which calls `onCloseRequested` - wire it to pop the same route (as above);
++ Wrap the WebView with `FanmeterBackHandler`, so the system back steps back through the Fanzone's own navigation first, instead of closing the whole screen (Android hardware/predictive back and iOS edge-swipe-to-pop are both covered).
+
+### 6. Open the Fanzone from your app
+
+From a button, a banner or a navbar item, open the Fanzone home:
+
+```dart
+openFanzoneHome();
 ```
 
 ## Build your own UI
 
-If you want full control and implement your own UI, this library exposes three methods, that must be called as demonstrated below. In particular:
+### 5. Get the event
 
-+ `startService`, starts the Fanmeter service that enables Fanmeter for your client's device during a particular event;
-+ `stopService`, stops the Fanmeter service. The service will, still, terminate automatically as soon as the event ends. This returns 1, if success, otherwise an error code;
-+ `isServiceRunning`, used to check the current status of the Fanmeter service. Returns a `(bool isRunning, int? eventId)` record, where `eventId` identifies the event the service is currently running for.
+The `getEventData()` method can be used to obtain the full data of a particular Fanmeter event, in a dictionary, including the defined rewards and leaderboard classifications, if existing. If null, or not provided, this returns the closest event to date:
 
-The `startService` method is used to start the Fanmeter service. This method accepts an eventId, that should be obtained using the `getEventData` method and should be called as follows (associated, for example, to a particular button):
+```dart
+/// Event name to show (nullable)
+String? EVENT_NAME = 'Round 1 2026-2027';
+
+// After initialized, you will be able to use the SDK methods.
+final result = await _fanmeterPlugin.getEventData(EVENT_NAME);
+print("[FANMETER - GETEVENTDATA - $EVENT_NAME]: $result");
+
+// OR.
+
+// After initialized, you will be able to use the SDK methods.
+final result = await _fanmeterPlugin.getEventData();
+print("[FANMETER - GETEVENTDATA]: $result");
+```
+
+### 6. Build your event screen
+
+In this integration, your app is responsible for the screen where the user participates in the event - it is the one you open from your app, and from a tapped notification (step 4). It should:
+
++ Show the event, with the data obtained in the previous step;
++ Offer a button for the user to join and leave the event, calling `startService` and `stopService`;
++ Show the current state of that button, with `isServiceRunning`;
++ Tell the user what went wrong whenever `startService` returns an error code (see the [Return codes](#return-codes)).
+
+The `startService` method is used to start the Fanmeter service that enables Fanmeter for your client's device during a particular event. This method accepts the eventId obtained in the previous step and should be called as follows (associated, for example, to a particular button):
 
 ```dart
 // You can obtain the eventId of an event by calling the getEventData method.
@@ -461,13 +447,71 @@ Where:
 + EVENT_ID, the id of the event the user will participate when the start service is called;
 + NOTIFICATION_CLASS_RESPONSE, the name of the class that is being instantiated when the user clicks the notification - example: "com.company.activities.SearchActivity" (null opens the app's default view).
 
-This method returns the following values:
+The `stopService` method is used to stop the Fanmeter service (can be toggled with the previous method). Even if the user does not explicitly stop the service, it will automatically stop as soon as the event finishes. This returns 1, if success, otherwise an error code.
+
+```dart
+final result = await _fanmeterPlugin.stopService();
+print("[FANMETER - STOPSERVICE]: $result");
+```
+
+Finally, the `isServiceRunning` method is used to check the current status of the Fanmeter service. This returns a `(bool isRunning, int? eventId)` record, where `eventId` identifies the event the service is currently running for.
+
+```dart
+final (isRunning, eventId) = await _fanmeterPlugin.isServiceRunning();
+print("[FANMETER - ISSERVICERUNNING]: isRunning=$isRunning, eventId=$eventId");
+```
+
+### 7. Listen to the user's participation (optional)
+
+You can subscribe to a listener that will notify you whenever there is a change in the user's participation status. For example, if the user leaves the venue of a geo-restricted event, the listener will alert you to this change. This can be particularly useful for updating the status of banners or buttons within your app.
+
+Two methods are available: `subscribeUserParticipationListener` and `unsubscribeUserParticipationListener`. The first method subscribes the listener to a specific event id, and you can subscribe to multiple events. The second method unsubscribes the listener (if no event id is provided, it will unsubscribe all active listeners) and always returns 1 (Success), as it forces the stop of any or all running listeners.
+
+```dart
+// Subscribing a listener.
+await _fanmeterPlugin.subscribeUserParticipationListener(EVENT_ID, ((value) {
+    print("[FANMETER - SUBSCRIBEUSERPARTICIPATION] $EVENT_ID: $value");
+    // Update the status of your button/banner.
+}));
+```
+
+```dart
+// Unsubscribing a listener. If no event id is set, it cancels all listeners.
+final result = await _fanmeterPlugin.unsubscribeUserParticipationListener();
+print("[FANMETER - UNSUBSCRIBEUSERPARTICIPATION]: $result");
+```
+
+The possible `value` states are listed in the [Participation states](#participation-states).
+
+## Reference
+
+### Methods
+
+| Method | What it does | Returns |
+| --- | --- | --- |
+| `initialize` | Initializes the SDK. Required before any other method. | The auth token, or null. |
+| `execute` | Processes a tapped Fanmeter notification. | A `(code, eventId)` record. |
+| `launchFanmeterNotification` | Launches a local Fanmeter notification, when the Android app is in the foreground. | A return code. |
+| `getInitialNotificationClick` / `onNotificationClick` | Detect a tap on a Fanmeter local notification (Android only). | The notification data. |
+| `getEventData` | Gets an event's data (the closest event, if no title is given). | A dictionary. |
+| `startService` | Starts the Fanmeter service for an event. | A return code. |
+| `stopService` | Stops the Fanmeter service. | 1, if success, otherwise an error code. |
+| `isServiceRunning` | Checks the current status of the Fanmeter service. | An `(isRunning, eventId)` record. |
+| `subscribeUserParticipationListener` | Notifies every change in the user's participation in an event. | A participation state. |
+| `unsubscribeUserParticipationListener` | Cancels the listener of an event (or all of them). | Always 1. |
+| `FanmeterWebInterface.makeController` | Creates a `WebViewController` with the Fanmeter bridge installed. | The `WebViewController`. |
+| `FanmeterBackHandler` | Steps the system back through the Fanzone's own navigation. | - |
+
+### Return codes
+
+The `execute` and `startService` methods return the following `code` values:
 
 + 1, success;
 + -80, no GPS/PUSH permissions;
 + -81, GPS disabled;
 + -82, invalid event coordinates;
 + -89, SDK not initialized;
++ -91, invalid notification data (`execute` only);
 + -92, invalid company license;
 + -93, invalid event;
 + -94, event not happening now;
@@ -476,22 +520,15 @@ This method returns the following values:
 + -97, failed to start the Fanmeter service;
 + -98, another Fanmeter service is already running.
 
-The `stopService` method is used to stop the Fanmeter service (can be toggled with the previous method). Even if the user does not explicitly stop the service, it will automatically stop as soon as the event finishes. This returns 1, if success, otherwise an error code.
+### Participation states
 
-```dart
-final result = await _fanmeterPlugin.stopService();
-print("[FANMETER - STOPSERVICE]: $result");
-```
+The `subscribeUserParticipationListener` listener can return the following status codes:
 
-Finally, the `isServiceRunning` method is used to check the current status of the Fanmeter service. This returns a `(bool isRunning, int? eventId)` record.
-
-```dart
-final (isRunning, eventId) = await _fanmeterPlugin.isServiceRunning();
-print("[FANMETER - ISSERVICERUNNING]: isRunning=$isRunning, eventId=$eventId");
-```
-
-## Additional info
-
-Other important methods are to **request user permission** to be able to **send notifications** and **request GPS permission**. Also, **get the user token and listen for changes** to get the user FCM_TOKEN and update it when it changes.
++ 0: User is not participating;
++ 1: Validating the user participation (validation may take up to 30 seconds);
++ 2: User is participating;
++ 3: User has GPS disabled;
++ 4: User is out of venue;
++ 5: Unknown GPS coordinates.
 
 For more info visit [our website](https://fanofthematch.ai/) or give us feedback to <info@pluggableai.xyz>.
