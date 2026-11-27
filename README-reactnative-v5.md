@@ -156,11 +156,23 @@ messaging().onTokenRefresh(token => {
 });
 ```
 
-You are also **required to subscribe the user to a FCM topic** so that the user can receive Fanmeter notifications. This can be done, for example, as follows:
+You are also **required to subscribe the user to FCM topics** so that the user can receive Fanmeter notifications. Each team has its own topic, named `fan_of_the_match_` followed by the team's code (the list of your teams' topics is provided by Pluggable), and a user only receives the Fan of the Match notifications of the topics they are subscribed to:
+
+  * **Single-team app**: subscribe every user to that team's topic;
+  * **Multi-team app** (e.g. a league or a multi-sport club): subscribe the user to a team's topic when they pick that team in your app, and unsubscribe when they drop it.
+
+This can be done, for example, as follows:
 
 ```tsx
-// Subscribe to a topic.
-messaging().subscribeToTopic('football_senior').then(() => console.log('Subscribed to topic: football_senior!'));
+// The topics of the teams the user picked in your app, from the list
+// provided by Pluggable.
+const pickedTeamTopics = ['fan_of_the_match_TEAM_A', 'fan_of_the_match_TEAM_B'];
+// Subscribe to the topic of each team the user picked.
+for(const topic of pickedTeamTopics) {
+    await messaging().subscribeToTopic(topic);
+}
+// And unsubscribe when the user drops a team.
+await messaging().unsubscribeFromTopic('fan_of_the_match_TEAM_A');
 ```
 
 For **Android**, to customize the used notification icon, just add the desired icon in the Android's drawable folder and name it **ic_push_app_icon**. Otherwise, a default icon, not related to your app, will be used.
@@ -333,6 +345,15 @@ Fanzone is Pluggable's web-based activation interface - it is the view you prese
   * `https://data.fanofthematch.ai/fanzone/` - the **Fanzone home**, opened from your app itself (a button, a banner, a navbar item);
   * `https://data.fanofthematch.ai/fanzone/fotm?eventId=EVENT_ID` - the **Fan of the Match activation for one event**, opened from a tapped Fanmeter notification, using the event id that `execute` returned.
 
+Both URLs take two query parameters:
+
+  * `lang` (required), the language the Fanzone is shown in - `pt`, `en` or `es`;
+  * `companyTeamId`, the team the Fanzone is opened with, using **your own id** for that team (the one your app already uses) - Pluggable maps it to the right content:
+    * **Single-team app**: not needed - the Fanzone opens with your team;
+    * **Multi-team app** (e.g. a league or a multi-sport club): required - pass the team the user picked in your app (the same one whose topic they are subscribed to, see step 2).
+
+For example, `https://data.fanofthematch.ai/fanzone/?lang=en&companyTeamId=YOUR_TEAM_ID` or `https://data.fanofthematch.ai/fanzone/fotm?eventId=EVENT_ID&lang=en&companyTeamId=YOUR_TEAM_ID`. The auth token always goes in the header, never in the URL.
+
 To use it, add [react-native-webview](https://github.com/react-native-webview/react-native-webview) to your app:
 
 ```bash
@@ -350,9 +371,14 @@ import WebView from 'react-native-webview';
 import { useFanmeterWebView } from 'fanmeter-sdk-reactnative';
 
 const FANZONE_URL = 'https://data.fanofthematch.ai/fanzone/';
+// The language and the team the Fanzone is opened with (the team is only
+// needed in a multi-team app - drop it from FANZONE_PARAMS otherwise).
+const FANZONE_LANG = 'en';
+const FANZONE_COMPANY_TEAM_ID = 'YOUR_TEAM_ID';
+const FANZONE_PARAMS = `lang=${FANZONE_LANG}&companyTeamId=${FANZONE_COMPANY_TEAM_ID}`;
 
-// Opened with FANZONE_URL from a button/banner/navbar, or with
-// `${FANZONE_URL}fotm?eventId=${eventId}` after a notification tap.
+// Opened with `${FANZONE_URL}?${FANZONE_PARAMS}` from a button/banner/navbar, or with
+// `${FANZONE_URL}fotm?eventId=${eventId}&${FANZONE_PARAMS}` after a notification tap.
 function FanzoneScreen({ url, authToken, onClose }) {
     const fanzone = useFanmeterWebView({
         url,
@@ -388,9 +414,9 @@ const openFanzone = (url: string) => {
 }
 
 // From a button/banner/navbar: the Fanzone home.
-const openFanzoneHome = () => openFanzone(FANZONE_URL);
+const openFanzoneHome = () => openFanzone(`${FANZONE_URL}?${FANZONE_PARAMS}`);
 // From a tapped notification: the FOTM activation of the event execute returned.
-const openFanzoneForEvent = (eventId: number) => openFanzone(`${FANZONE_URL}fotm?eventId=${eventId}`);
+const openFanzoneForEvent = (eventId: number) => openFanzone(`${FANZONE_URL}fotm?eventId=${eventId}&${FANZONE_PARAMS}`);
 
 if(fanzoneTarget != null){
     return (
